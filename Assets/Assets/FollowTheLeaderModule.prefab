@@ -311,7 +311,7 @@ MonoBehaviour:
   - {fileID: 0}
   - {fileID: 0}
   IsPassThrough: 0
-  ChildRowLength: 3
+  ChildRowLength: 1
   Highlight: {fileID: 11464240}
   SelectableArea: {fileID: 0}
   DefaultSelectableIndex: 0
@@ -355,6 +355,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Bomb: {fileID: 11489324}
   Module: {fileID: 11429752}
+  Selectable: {fileID: 11420650}
   Audio: {fileID: 11496072}
   ColorMaterials:
   - {fileID: 2100000, guid: 0ab6607a79d6a064bb2830088e16477f, type: 2}

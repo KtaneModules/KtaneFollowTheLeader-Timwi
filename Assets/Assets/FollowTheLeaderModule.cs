@@ -14,6 +14,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 {
     public KMBombInfo Bomb;
     public KMBombModule Module;
+    public KMSelectable Selectable;
     public KMAudio Audio;
 
     public Material[] ColorMaterials;
@@ -73,26 +74,45 @@ public class FollowTheLeaderModule : MonoBehaviour
         // Since the above will never skip peg #0, rotate the arrangement by a random amount
         // so that all pegs have equal chances of being skipped.
         var rotation = Rnd.Range(0, 12);
-        var rnd = new System.Random();
         for (int i = 0; i < _wireInfos.Count; i++)
         {
             _wireInfos[i].ConnectedFrom = (_wireInfos[i].ConnectedFrom + rotation) % 12;
             _wireInfos[i].ConnectedTo = (_wireInfos[i].ConnectedTo + rotation) % 12;
 
+            // The irony of using one RNG to seed another RNG isn’t lost on me
+            var seed = Rnd.Range(0, int.MaxValue);
+            var rnd = new System.Random(seed);
+
             var wire = new GameObject();
-
             var meshFilter = wire.AddComponent<MeshFilter>();
-            meshFilter.mesh = MeshGenerator.GenerateWire(rnd, _wireInfos[i].DoesSkip ? _wireInfos[i].ConnectedFrom % 2 : 2);
-
+            meshFilter.mesh = MeshGenerator.GenerateWire(rnd, _wireInfos[i].DoesSkip ? _wireInfos[i].ConnectedFrom % 2 : 2, MeshGenerator._wireRadius);
             var meshRenderer = wire.AddComponent<MeshRenderer>();
             meshRenderer.material = ColorMaterials[_wireInfos[i].Color];
+            var selectable = wire.AddComponent<KMSelectable>();
+            selectable.Parent = Selectable;
+            Selectable.Children[i] = selectable;
+
+            rnd = new System.Random(seed);
+            var wireHighlight = new GameObject();
+            wireHighlight.transform.parent = wire.transform;
+            meshFilter = wireHighlight.AddComponent<MeshFilter>();
+            meshFilter.mesh = MeshGenerator.GenerateWire(rnd, _wireInfos[i].DoesSkip ? _wireInfos[i].ConnectedFrom % 2 : 2, MeshGenerator._wireRadiusHighlight);
+            var highlightable = wireHighlight.AddComponent<KMHighlightable>();
+            highlightable.HighlightScale = new Vector3(1, 1, 1);
+            selectable.Highlight = highlightable;
+
+            wire.name = string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1);
+            wireHighlight.name = string.Format("Wire {0}-to-{1} highlight", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1);
+
+            var j = i;
+            selectable.OnInteract += delegate { Debug.Log("You clicked " + _wireInfos[j]); return false; };
 
             double x, z;
             var angle = MeshGenerator.GetWirePosAndAngle(_wireInfos[i].ConnectedFrom, _wireInfos[i].ConnectedTo, out x, out z);
 
             wire.transform.parent = Module.transform;
-            wire.transform.Translate(new Vector3((float)x, 0.023f, (float)z));
-            wire.transform.Rotate(new Vector3(0, (float)(-angle), 0));
+            wire.transform.Translate(new Vector3((float) x, 0.023f, (float) z));
+            wire.transform.Rotate(new Vector3(0, (float) (-angle), 0));
             wire.transform.Rotate(new Vector3(-90, 0, 0));
         }
     }
@@ -103,18 +123,22 @@ public class FollowTheLeaderModule : MonoBehaviour
         if (_serial == null)
         {
             // Generate random values for testing in Unity
-            _serial = string.Join("", Enumerable.Range(0, 6).Select(i => Rnd.Range(0, 36)).Select(i => i < 10 ? ((char)('0' + i)).ToString() : ((char)('A' + i - 10)).ToString()).ToArray());
+            _serial = string.Join("", Enumerable.Range(0, 6).Select(i => Rnd.Range(0, 36)).Select(i => i < 10 ? ((char) ('0' + i)).ToString() : ((char) ('A' + i - 10)).ToString()).ToArray());
             _hasRJ = Rnd.Range(0, 2) == 0;
             _numBatteries = Rnd.Range(0, 7);
             _hasLitCLR = Rnd.Range(0, 2) == 0;
         }
         else
         {
-            Debug.Log("[Follow the Leader] Ports: " + string.Join(", ", Bomb.GetPorts().ToArray()));
             _numBatteries = Bomb.GetBatteryCount();
-            _hasRJ = Bomb.GetPorts().Contains("RJ-45");
+            _hasRJ = Bomb.GetPortCount(KMBombInfoExtensions.KnownPortType.RJ45) > 0;
             _hasLitCLR = Bomb.GetOnIndicators().Contains("CLR");
         }
+
+        Debug.Log("[FollowTheLeader] Serial number is " + _serial);
+        Debug.Log("[FollowTheLeader] Number of batteries: " + _numBatteries);
+        Debug.Log("[FollowTheLeader] Has RJ-45 port: " + (_hasRJ ? "Yes" : "No"));
+        Debug.Log("[FollowTheLeader] Has lit CLR indicator: " + (_hasLitCLR ? "Yes" : "No"));
 
         // Figure out the starting wire (as index into wireInfos, rather than peg number)
         int curIndex;
@@ -175,7 +199,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         // The starting step corresponds to the first letter in the serial number.
         var curStep = _serial.Where(ch => ch >= 'A' && ch <= 'Z').Select(ch => ch - 'A').FirstOrDefault() % rules.Length;
         // If the wire at the starting plug is red, green, or white, progress through the steps in reverse alphabetical order instead.
-        var reverse = new[]{ 0, 1, 2 }.Contains(_wireInfos[curIndex].Color);
+        var reverse = new[] { 0, 1, 2 }.Contains(_wireInfos[curIndex].Color);
 
         _expectedCuts.Clear();
 
@@ -203,10 +227,6 @@ public class FollowTheLeaderModule : MonoBehaviour
             curStep = (curStep + rules.Length + (reverse ? -1 : 1)) % rules.Length;
         }
 
-        Debug.Log("[FollowTheLeader] Serial number is " + _serial);
-        Debug.Log("[FollowTheLeader] Number of batteries: " + _numBatteries);
-        Debug.Log("[FollowTheLeader] Has RJ-45 port: " + (_hasRJ ? "Yes" : "No"));
-        Debug.Log("[FollowTheLeader] Has lit CLR indicator: " + (_hasLitCLR ? "Yes" : "No"));
         Debug.Log("[FollowTheLeader] My expectation (" + _expectedCuts.Count + "): cut " + string.Join(", ", _expectedCuts.Select(wi => string.Format("{0}-to-{1} ({2})", wi.ConnectedFrom + 1, wi.ConnectedTo + 1, ColorNames[wi.Color])).ToArray()));
     }
 }

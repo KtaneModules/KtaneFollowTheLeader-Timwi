@@ -7,12 +7,14 @@ namespace FollowTheLeaderNS
 {
     public class MeshGenerator
     {
+        public const double _wireRadius = .0014;
+        public const double _wireRadiusHighlight = .0022;
+
         const double _hexFrameBoxOuterRadius = .003;
         const double _hexFrameBoxInnerRadius = .002;
         const double _hexFrameBoxHeight = .005;
         const double _hexFrameBoxLocationRatio = .6;
 
-        const double _wireRadius = .0014;
         const double _wireMaxSegmentDeviation = .005;
         const double _wireMaxBézierDeviation = .005;
 
@@ -26,7 +28,7 @@ namespace FollowTheLeaderNS
         private static HexFrameInfo _outerHexFrame = new HexFrameInfo { InnerRadius = .062, OuterRadius = .07, Bevel = .003, Depth = .005, StartAngle = 0 };
         private static HexFrameInfo _innerHexFrame = new HexFrameInfo { InnerRadius = .032, OuterRadius = .04, Bevel = .003, Depth = .005, StartAngle = 30 };
 
-        public static Mesh GenerateWire(System.Random rnd, int lengthIndex)
+        public static Mesh GenerateWire(System.Random rnd, int lengthIndex, double thickness)
         {
             var length = getWireLength(lengthIndex);
             var start = pt(0, 0, 0);
@@ -47,13 +49,13 @@ namespace FollowTheLeaderNS
             var deviations = newArray(numSegments - 1, _ => pt(rnd.NextDouble(), rnd.NextDouble(), rnd.NextDouble()) * _wireMaxBézierDeviation);
 
             var points =
-                new[]{ new { ControlBefore = default(Pt), Point = start, ControlAfter = startControl } }
+                new[] { new { ControlBefore = default(Pt), Point = start, ControlAfter = startControl } }
                 .Concat(intermediatePoints.Select((p, i) => new { ControlBefore = p - deviations[i], Point = p, ControlAfter = p + deviations[i] }))
-                .Concat(new[]{ new { ControlBefore = endControl, Point = end, ControlAfter = default(Pt) } })
+                .Concat(new[] { new { ControlBefore = endControl, Point = end, ControlAfter = default(Pt) } })
                 .SelectConsecutivePairs(false, (one, two) => bézier(one.Point, one.ControlAfter, two.ControlBefore, two.Point, bézierSteps))
                 .SelectMany((x, i) => i == 0 ? x : x.Skip(1))
                 .ToArray();
-            return tubeFromCurve(points, startControl - start, end - endControl, _wireRadius, tubeRevSteps);
+            return tubeFromCurve(points, startControl - start, end - endControl, thickness, tubeRevSteps);
         }
 
         private static void getBoxCenter(int peg, out double x, out double z)
@@ -77,9 +79,9 @@ namespace FollowTheLeaderNS
             public Pt Normal;
             public int VertexIndex;
 
-            public Vector3 V { get { return new Vector3((float)Point.X, (float)Point.Y, (float)Point.Z); } }
+            public Vector3 V { get { return new Vector3((float) Point.X, (float) Point.Y, (float) Point.Z); } }
 
-            public Vector3 N { get { return new Vector3((float)Normal.X, (float)Normal.Y, (float)Normal.Z); } }
+            public Vector3 N { get { return new Vector3((float) Normal.X, (float) Normal.Y, (float) Normal.Z); } }
         }
 
         private static Mesh createMesh(bool closedX, bool closedY, VertexInfo[][] meshData)
@@ -100,7 +102,7 @@ namespace FollowTheLeaderNS
                         meshData[i][j].VertexIndex = uniqueVectors.IndexOf(meshData[i][j].V);
 
             var mesh = new Mesh
-            { 
+            {
                 vertices = uniqueVectors.ToArray(),
                 triangles = Enumerable.Range(0, meshData.Length).SelectManyConsecutivePairs(closedX, (i1, i2) =>
                     Enumerable.Range(0, len).SelectManyConsecutivePairs(closedY, (j1, j2) => new[]
@@ -153,7 +155,7 @@ namespace FollowTheLeaderNS
         private static IEnumerable<Pt> bézier(Pt start, Pt control1, Pt control2, Pt end, int steps)
         {
             return Enumerable.Range(0, steps)
-                .Select(i => (double)i / (steps - 1))
+                .Select(i => (double) i / (steps - 1))
                 .Select(t => pow(1 - t, 3) * start + 3 * pow(1 - t, 2) * t * control1 + 3 * (1 - t) * t * t * control2 + pow(t, 3) * end);
         }
 
