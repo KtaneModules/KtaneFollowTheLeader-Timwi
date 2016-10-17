@@ -33,9 +33,6 @@ public class FollowTheLeaderModule : MonoBehaviour
         public int Color;
         public bool MustCut;
 
-        private KMSelectable _selectable;
-        public KMSelectable Selectable { get { return _selectable; } }
-
         public void Activate(Transform transform, Material[] colorMats, List<WireInfo> expectedCuts, KMBombModule bomb)
         {
             // The irony of using one RNG to seed another RNG isn’t lost on me
@@ -48,11 +45,33 @@ public class FollowTheLeaderModule : MonoBehaviour
 
             rnd = new System.Random(seed);
             var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom + 1, ConnectedTo + 1));
-            wireHighlight.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight);
+            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight); ;
+            wireHighlight.GetComponent<MeshFilter>().mesh = highlightMesh;
 
-            _selectable = transform.GetComponent<KMSelectable>();
-            _selectable.OnInteract += delegate
+            var clone = wireHighlight.Find("Highlight(Clone)");
+            if (clone != null)
+                clone.GetComponent<MeshFilter>().mesh = highlightMesh;
+
+            rnd = new System.Random(seed);
+            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, cut: true);
+            rnd = new System.Random(seed);
+            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, cut: true);
+
+            bool cut = false;
+            transform.GetComponent<KMSelectable>().OnInteract += delegate
             {
+                if (cut)
+                {
+                    bomb.HandleStrike();
+                    return false;
+                }
+                cut = true;
+                transform.GetComponent<MeshFilter>().mesh = cutMesh;
+                wireHighlight.GetComponent<MeshFilter>().mesh = cutMeshHighlight;
+                var hClone = wireHighlight.Find("Highlight(Clone)");
+                if (hClone != null)
+                    hClone.GetComponent<MeshFilter>().mesh = cutMeshHighlight;
+
                 if (expectedCuts.Count == 0 || expectedCuts[0] != this)
                     bomb.HandleStrike();
                 else
@@ -69,7 +88,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
         public override string ToString()
         {
-            return string.Format("<From={0}, To={1}, Color={2}>", ConnectedFrom + 1, ConnectedTo + 1, ColorNames[Color]);
+            return string.Format("Wire {0}-to-{1} ({2})", ConnectedFrom + 1, ConnectedTo + 1, ColorNames[Color]);
         }
     }
 
@@ -166,15 +185,15 @@ public class FollowTheLeaderModule : MonoBehaviour
             _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), ColorMaterials, _expectedCuts, Module);
 
         // Code from sircharles
-        Selectable.Children = _wireInfos.Select(wi => wi.Selectable).ToArray();
-        var modSelectable = GetComponent("ModSelectable");
-        if (modSelectable != null)
-            modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
+        //Selectable.Children = _wireInfos.Select(wi => wi.Selectable).ToArray();
+        //var modSelectable = GetComponent("ModSelectable");
+        //if (modSelectable != null)
+        //    modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
     }
 
     static T[] newArray<T>(params T[] array) { return array; }
 
-    static Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>[] rules = newArray(
+    static Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>[] rules = newArray<Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>>(
         // A or N: The previous wire is not yellow or blue or green.
         (p3, p2, p1, p0) => !new[] { 1, 3, 4 }.Contains(p1.Color),
         // B or O: The previous wire leads to an even numbered plug.
@@ -184,7 +203,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         // D or Q: The previous wire is red or blue or black.
         (p3, p2, p1, p0) => new[] { 0, 4, 5 }.Contains(p1.Color),
         // E or R: The three previous wires are not all the same color.
-#error this is wrong
+#warning this is wrong
         (p3, p2, p1, p0) => p3 == null || p2 == null || p3.Color != p1.Color || p2.Color != p1.Color,
         // F or S: Exactly one of the previous two wires are cut.
         (p3, p2, p1, p0) => p1.MustCut ^ (p2 != null && p2.MustCut),
