@@ -8,7 +8,7 @@ namespace FollowTheLeaderNS
     public class MeshGenerator
     {
         public const double _wireRadius = .0014;
-        public const double _wireRadiusHighlight = .0022;
+        public const double _wireRadiusHighlight = .0028;
 
         const double _hexFrameBoxOuterRadius = .003;
         const double _hexFrameBoxInnerRadius = .002;

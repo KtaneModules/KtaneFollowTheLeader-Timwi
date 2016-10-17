@@ -108,13 +108,6 @@ Material:
           m_Offset: {x: 0, y: 0}
       data:
         first:
-          name: _Detail
-        second:
-          m_Texture: {fileID: 0}
-          m_Scale: {x: 1, y: 1}
-          m_Offset: {x: 0, y: 0}
-      data:
-        first:
           name: _ParallaxMap
         second:
           m_Texture: {fileID: 0}
@@ -158,6 +151,13 @@ Material:
       data:
         first:
           name: _SpecGlossMap
+        second:
+          m_Texture: {fileID: 0}
+          m_Scale: {x: 1, y: 1}
+          m_Offset: {x: 0, y: 0}
+      data:
+        first:
+          name: _Detail
         second:
           m_Texture: {fileID: 0}
           m_Scale: {x: 1, y: 1}
@@ -291,7 +291,7 @@ Material:
       data:
         first:
           name: _Color
-        second: {r: 0.46323532, g: 0.46034527, b: 0.45642304, a: 1}
+        second: {r: 0.4039216, g: 0.48235297, b: 0.57254905, a: 1}
       data:
         first:
           name: _SpecColor

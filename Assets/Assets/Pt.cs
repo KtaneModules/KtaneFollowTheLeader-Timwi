@@ -4,92 +4,27 @@ namespace FollowTheLeaderNS
 {
     public struct Pt : IEquatable<Pt>
     {
-        public double X;
-        public double Y;
-        public double Z;
+        public double X; public double Y; public double Z;
+        public override string ToString() { return string.Format("({0:R}, {1:R}, {2:R})", X, Y, Z); }
+        public Pt(double x, double y, double z) { X = x; Y = y; Z = z; }
+        public Pt Add(double x = 0, double y = 0, double z = 0) { return new Pt(X + x, Y + y, Z + z); }
+        public Pt Set(double? x = null, double? y = null, double? z = null) { return new Pt(x ?? X, y ?? Y, z ?? Z); }
 
-        public override string ToString()
-        {
-            return string.Format("({0:R}, {1:R}, {2:R})", X, Y, Z);
-        }
+        public static bool operator ==(Pt one, Pt two) { return one.X == two.X && one.Y == two.Y && one.Z == two.Z; }
+        public static bool operator !=(Pt one, Pt two) { return one.X != two.X || one.Y != two.Y || one.Z != two.Z; }
+        public override bool Equals(object obj) { return obj is Pt && ((Pt) obj) == this; }
+        public override int GetHashCode() { return unchecked((X.GetHashCode() * 31 + Y.GetHashCode()) * 31 + Z.GetHashCode()); }
+        public bool Equals(Pt other) { return other == this; }
 
-        public Pt(double x, double y, double z)
-        {
-            X = x;
-            Y = y;
-            Z = z;
-        }
-
-        public Pt Add(double x = 0, double y = 0, double z = 0)
-        {
-            return new Pt(X + x, Y + y, Z + z);
-        }
-
-        public Pt Set(double? x = null, double? y = null, double? z = null)
-        {
-            return new Pt(x ?? X, y ?? Y, z ?? Z);
-        }
-
-        public static bool operator ==(Pt one, Pt two)
-        {
-            return one.X == two.X && one.Y == two.Y && one.Z == two.Z;
-        }
-
-        public static bool operator !=(Pt one, Pt two)
-        {
-            return one.X != two.X || one.Y != two.Y || one.Z != two.Z;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return obj is Pt && ((Pt)obj) == this;
-        }
-
-        public override int GetHashCode()
-        {
-            return unchecked((X.GetHashCode() * 31 + Y.GetHashCode()) * 31 + Z.GetHashCode());
-        }
-
-        public bool Equals(Pt other)
-        {
-            return other == this;
-        }
-
-        public static Pt operator +(Pt one, Pt two)
-        {
-            return new Pt(one.X + two.X, one.Y + two.Y, one.Z + two.Z);
-        }
-
-        public static Pt operator -(Pt one, Pt two)
-        {
-            return new Pt(one.X - two.X, one.Y - two.Y, one.Z - two.Z);
-        }
-
-        public static Pt operator *(Pt one, double two)
-        {
-            return new Pt(one.X * two, one.Y * two, one.Z * two);
-        }
-
-        public static Pt operator *(double one, Pt two)
-        {
-            return new Pt(two.X * one, two.Y * one, two.Z * one);
-        }
-
-        public static Pt operator /(Pt one, double two)
-        {
-            return new Pt(one.X / two, one.Y / two, one.Z / two);
-        }
-
-        public static Pt operator -(Pt one)
-        {
-            return new Pt(-one.X, -one.Y, -one.Z);
-        }
+        public static Pt operator +(Pt one, Pt two) { return new Pt(one.X + two.X, one.Y + two.Y, one.Z + two.Z); }
+        public static Pt operator -(Pt one, Pt two) { return new Pt(one.X - two.X, one.Y - two.Y, one.Z - two.Z); }
+        public static Pt operator *(Pt one, double two) { return new Pt(one.X * two, one.Y * two, one.Z * two); }
+        public static Pt operator *(double one, Pt two) { return new Pt(two.X * one, two.Y * one, two.Z * one); }
+        public static Pt operator /(Pt one, double two) { return new Pt(one.X / two, one.Y / two, one.Z / two); }
+        public static Pt operator -(Pt one) { return new Pt(-one.X, -one.Y, -one.Z); }
 
         // Vector cross product
-        public static Pt operator *(Pt a, Pt b)
-        {
-            return new Pt(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
-        }
+        public static Pt operator *(Pt a, Pt b) { return new Pt(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X); }
 
         public bool IsZero { get { return X == 0 && Y == 0 && Z == 0; } }
 
