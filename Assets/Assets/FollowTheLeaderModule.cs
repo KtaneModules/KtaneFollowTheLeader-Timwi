@@ -33,6 +33,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         // 0 = red, 1 = green, 2 = white, 3 = yellow, 4 = blue, 5 = black
         public int Color;
         public bool MustCut;
+        public bool IsCut;
 
         public void Activate(Transform transform, Material[] colorMats, Material copperMat, List<WireInfo> expectedCuts, KMBombModule bomb)
         {
@@ -41,12 +42,12 @@ public class FollowTheLeaderModule : MonoBehaviour
             var rnd = new System.Random(seed);
             var lengthIndex = DoesSkip ? ConnectedFrom % 2 : 2;
 
-            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Uncut);
+            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Uncut, false);
             transform.GetComponent<MeshRenderer>().material = colorMats[Color];
 
             rnd = new System.Random(seed);
             var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom + 1, ConnectedTo + 1));
-            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, Color, MeshGenerator.WirePiece.Uncut);
+            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Uncut, true);
             wireHighlight.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             var clone = wireHighlight.Find("Highlight(Clone)");
@@ -54,21 +55,21 @@ public class FollowTheLeaderModule : MonoBehaviour
                 clone.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             rnd = new System.Random(seed);
-            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Cut);
+            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Cut, false);
             rnd = new System.Random(seed);
-            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, Color, MeshGenerator.WirePiece.Cut);
+            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Cut, true);
             rnd = new System.Random(seed);
-            var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Copper);
+            var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Copper, false);
 
-            bool cut = false;
+            IsCut = false;
             transform.GetComponent<KMSelectable>().OnInteract += delegate
             {
-                if (cut)
+                if (IsCut)
                 {
                     bomb.HandleStrike();
                     return false;
                 }
-                cut = true;
+                IsCut = true;
                 transform.GetComponent<MeshFilter>().mesh = cutMesh;
                 wireHighlight.GetComponent<MeshFilter>().mesh = cutMeshHighlight;
                 var hClone = wireHighlight.Find("Highlight(Clone)");
@@ -88,7 +89,8 @@ public class FollowTheLeaderModule : MonoBehaviour
                 else
                 {
                     Debug.Log("Correct");
-                    expectedCuts.RemoveAt(0);
+                    while (expectedCuts.Count > 0 && expectedCuts[0].IsCut)
+                        expectedCuts.RemoveAt(0);
                     if (expectedCuts.Count == 0)
                         bomb.HandlePass();
                 }
@@ -185,7 +187,7 @@ public class FollowTheLeaderModule : MonoBehaviour
                 wire.transform.Rotate(new Vector3(-90, 0, 0));
             }
         }
-        */
+        /**/
 
         // Disable all the wires (we will later re-enable the ones we need)
         for (int from = 0; from < 12; from++)

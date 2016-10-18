@@ -7,16 +7,21 @@ namespace FollowTheLeaderNS
 {
     public class MeshGenerator
     {
-        public const double _wireRadius = .0014;
-        public const double _wireRadiusHighlight = .0028;
+        public const double _wireRadius = .002;
+        public const double _wireRadiusHighlight = .004;
 
         const double _hexFrameBoxOuterRadius = .003;
         const double _hexFrameBoxInnerRadius = .002;
         const double _hexFrameBoxHeight = .005;
         const double _hexFrameBoxLocationRatio = .6;
 
-        const double _wireMaxSegmentDeviation = .005;
-        const double _wireMaxBézierDeviation = .005;
+        const double _wireMaxSegmentDeviation = .003;
+        const double _wireMaxBézierDeviation = .003;
+
+        const double _firstControlHeight = .02; // was .01
+        const double _interpolateHeight = .01;  // was .007
+        const double _firstControlHeightHighlight = .01; // was .01
+        const double _interpolateHeightHighlight = .007;  // was .007
 
         sealed class HexFrameInfo
         {
@@ -25,8 +30,8 @@ namespace FollowTheLeaderNS
             public double BoxCenterRadius { get { return InnerRadius * _hexFrameBoxLocationRatio + OuterRadius * (1 - _hexFrameBoxLocationRatio); } }
         }
 
-        private static HexFrameInfo _outerHexFrame = new HexFrameInfo { InnerRadius = .062, OuterRadius = .07, Bevel = .003, Depth = .005, StartAngle = 0 };
-        private static HexFrameInfo _innerHexFrame = new HexFrameInfo { InnerRadius = .032, OuterRadius = .04, Bevel = .003, Depth = .005, StartAngle = 30 };
+        private static HexFrameInfo _outerHexFrame = new HexFrameInfo { InnerRadius = .058, OuterRadius = .070, Bevel = .003, Depth = .005, StartAngle = 0 };
+        private static HexFrameInfo _innerHexFrame = new HexFrameInfo { InnerRadius = .032, OuterRadius = .044, Bevel = .003, Depth = .005, StartAngle = 30 };
 
         sealed class CPC { public Pt ControlBefore, Point, ControlAfter; }
 
@@ -41,20 +46,24 @@ namespace FollowTheLeaderNS
 
         public enum WirePiece { Uncut, Cut, Copper }
 
-        public static Mesh GenerateWire(System.Random rnd, int lengthIndex, double thickness, int color, WirePiece piece)
+        public static Mesh GenerateWire(System.Random rnd, int lengthIndex, int color, WirePiece piece, bool highlight)
         {
             var length = getWireLength(lengthIndex);
+            var thickness = highlight ? _wireRadiusHighlight : _wireRadius;
+            var firstControlHeight = highlight ? _firstControlHeightHighlight : _firstControlHeight;
+            var interpolateHeight = highlight ? _interpolateHeightHighlight : _interpolateHeight;
+
             var start = pt(0, 0, 0);
-            var startControl = pt(length / 10, 0, .01);
-            var endControl = pt(length * 9 / 10, 0, .01);
+            var startControl = pt(length / 10, 0, firstControlHeight);
+            var endControl = pt(length * 9 / 10, 0, firstControlHeight);
             var end = pt(length, 0, 0);
-            var numSegments = new[] { 6, 2, 4 }[lengthIndex];
+            var numSegments = new[] { 6, 4, 4 }[lengthIndex];
 
             var bézierSteps = 16;
             var tubeRevSteps = 16;
 
-            var interpolateStart = pt(0, 0, .007);
-            var interpolateEnd = pt(length, 0, .007);
+            var interpolateStart = pt(0, 0, interpolateHeight);
+            var interpolateEnd = pt(length, 0, interpolateHeight);
 
             var intermediatePoints = newArray(numSegments - 1, i => interpolateStart + (interpolateEnd - interpolateStart) * (i + 1) / numSegments + pt(rnd.NextDouble() - .5, rnd.NextDouble() - .5, rnd.NextDouble() - .5) * _wireMaxSegmentDeviation);
             var deviations = newArray(numSegments - 1, _ => pt(rnd.NextDouble(), rnd.NextDouble(), rnd.NextDouble()) * _wireMaxBézierDeviation);
@@ -78,7 +87,8 @@ namespace FollowTheLeaderNS
                     .SelectMany((x, i) => i == 0 ? x : x.Skip(1))
                     .ToArray();
 
-                var reserveForCopper = 3;
+                var reserveForCopper = 6;
+                var discardCopper = 2;
 
                 if (piece == WirePiece.Cut)
                 {
@@ -90,24 +100,27 @@ namespace FollowTheLeaderNS
                 }
                 else
                 {
-                    var copper = tubeFromCurve(points.TakeLast(reserveForCopper + 2).ToArray(), thickness / 2, tubeRevSteps).Skip(1).ToArray();
-                    var copperCapCenter = points[points.Length - 1];
+                    var copper = tubeFromCurve(points.TakeLast(reserveForCopper + 2).SkipLast(discardCopper).ToArray(), thickness / 2, tubeRevSteps).Skip(1).ToArray();
+                    var copperCapCenter = points[points.Length - 1 - discardCopper];
                     var copperNormal = copperCapCenter - points[points.Length - 2];
                     var copperCap = copper[copper.Length - 1].SelectConsecutivePairs(true, (v1, v2) => new[] { copperCapCenter, v2.Point, v1.Point }.Select(p => new VertexInfo { Point = p, Normal = copperNormal }).ToArray()).ToArray();
                     return createFaces(false, true, copper).Concat(copperCap);
                 }
             });
 
-            var rotAngle = rnd.NextDouble() * 7 + 7;
-            Func<Pt, Pt> rot = p => p.Rotate(new Pt(0, 0, 0), new Pt(0, 0, 1), rotAngle);
+            var rotAngle = (rnd.NextDouble() * 7 + 5) * (rnd.Next(2) == 0 ? -1 : 1);
+            var rotAxisStart = new Pt(0, 0, 0);
+            var rotAxisEnd = new Pt(rnd.NextDouble() * .01, rnd.NextDouble() * .01, 1);
+            Func<Pt, Pt> rot = p => p.Rotate(rotAxisStart, rotAxisEnd, rotAngle);
             var beforeCut =
                 new[] { new CPC { ControlBefore = default(Pt), Point = start, ControlAfter = startControl } }
                 .Concat(intermediatePoints.Take(numSegments / 2).Select((p, i) => new CPC { ControlBefore = rot(p - deviations[i]), Point = rot(p), ControlAfter = rot(p + deviations[i]) }));
             var bcTube = partialWire(beforeCut);
 
             var cutOffPoint = (numSegments - 1) / 2;
-            rotAngle = rnd.NextDouble() * 7 + 7;
-            rot = p => p.Rotate(new Pt(length, 0, 0), new Pt(length, 0, 1), rotAngle);
+            rotAngle = (rnd.NextDouble() * 7 + 5) * (rnd.Next(2) == 0 ? -1 : 1);
+            rotAxisStart = new Pt(length, 0, 0);
+            rotAxisEnd = new Pt(length + rnd.NextDouble() * .01, rnd.NextDouble() * .01, 1);
             var afterCut =
                 new[] { new CPC { ControlBefore = default(Pt), Point = end, ControlAfter = endControl } }
                 .Concat(intermediatePoints.Skip(cutOffPoint).Select((p, i) => new CPC { ControlBefore = rot(p + deviations[i + cutOffPoint]), Point = rot(p), ControlAfter = rot(p - deviations[i + cutOffPoint]) }).Reverse());
