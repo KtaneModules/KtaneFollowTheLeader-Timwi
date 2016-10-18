@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace FollowTheLeaderNS
 {
-    public static class ExtensionMethods
+    public static class Ex
     {
         public static double sin(double x) { return Math.Sin(x * Math.PI / 180); }
         public static double cos(double x) { return Math.Cos(x * Math.PI / 180); }
@@ -179,5 +179,7 @@ namespace FollowTheLeaderNS
             }
             return queue.AsEnumerable();
         }
+
+        public static T[] NewArray<T>(params T[] array) { return array; }
     }
 }

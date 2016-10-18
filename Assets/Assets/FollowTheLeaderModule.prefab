@@ -3558,6 +3558,7 @@ MonoBehaviour:
   - {fileID: 2100000, guid: 0bbbcc12b518a024c8575035b6812e48, type: 2}
   - {fileID: 2100000, guid: 5ef26f7af08ba214f872a923a6c594fd, type: 2}
   - {fileID: 2100000, guid: e652b2f5da9bf9a48aca208202277f76, type: 2}
+  CopperMaterial: {fileID: 2100000, guid: e4c9b1d638d08bb4ab7365a6856f1b06, type: 2}
   WireColliderMeshes:
   - {fileID: 4300000, guid: e9b9f5d221327c14f952c6ebf5958538, type: 3}
   - {fileID: 4300000, guid: c3e79e1572e71c64d95bc0179d6858e8, type: 3}

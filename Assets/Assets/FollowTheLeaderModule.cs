@@ -18,6 +18,7 @@ public class FollowTheLeaderModule : MonoBehaviour
     public KMAudio Audio;
 
     public Material[] ColorMaterials;
+    public Material CopperMaterial;
     public Mesh[] WireColliderMeshes;
 
     static string[] ColorNames = { "Red", "Green", "White", "Yellow", "Blue", "Black" };
@@ -33,19 +34,19 @@ public class FollowTheLeaderModule : MonoBehaviour
         public int Color;
         public bool MustCut;
 
-        public void Activate(Transform transform, Material[] colorMats, List<WireInfo> expectedCuts, KMBombModule bomb)
+        public void Activate(Transform transform, Material[] colorMats, Material copperMat, List<WireInfo> expectedCuts, KMBombModule bomb)
         {
             // The irony of using one RNG to seed another RNG isn’t lost on me
             var seed = Rnd.Range(0, int.MaxValue);
             var rnd = new System.Random(seed);
             var lengthIndex = DoesSkip ? ConnectedFrom % 2 : 2;
 
-            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius);
+            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Uncut);
             transform.GetComponent<MeshRenderer>().material = colorMats[Color];
 
             rnd = new System.Random(seed);
             var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom + 1, ConnectedTo + 1));
-            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight); ;
+            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, Color, MeshGenerator.WirePiece.Uncut);
             wireHighlight.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             var clone = wireHighlight.Find("Highlight(Clone)");
@@ -53,9 +54,11 @@ public class FollowTheLeaderModule : MonoBehaviour
                 clone.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             rnd = new System.Random(seed);
-            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, cut: true);
+            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Cut);
             rnd = new System.Random(seed);
-            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, cut: true);
+            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadiusHighlight, Color, MeshGenerator.WirePiece.Cut);
+            rnd = new System.Random(seed);
+            var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, MeshGenerator._wireRadius, Color, MeshGenerator.WirePiece.Copper);
 
             bool cut = false;
             transform.GetComponent<KMSelectable>().OnInteract += delegate
@@ -71,6 +74,14 @@ public class FollowTheLeaderModule : MonoBehaviour
                 var hClone = wireHighlight.Find("Highlight(Clone)");
                 if (hClone != null)
                     hClone.GetComponent<MeshFilter>().mesh = cutMeshHighlight;
+
+                var child = new GameObject();
+                child.transform.parent = transform;
+                child.transform.localRotation = new Quaternion(0, 0, 0, 0);
+                child.transform.localScale = new Vector3(1, 1, 1);
+                child.transform.localPosition = new Vector3(0, 0, 0);
+                child.AddComponent<MeshFilter>().mesh = copperMesh;
+                child.AddComponent<MeshRenderer>().material = copperMat;
 
                 if (expectedCuts.Count == 0 || expectedCuts[0] != this)
                     bomb.HandleStrike();
@@ -182,7 +193,7 @@ public class FollowTheLeaderModule : MonoBehaviour
                 Module.transform.Find(string.Format("Wire {0}-to-{1}", from + 1, (from + (skip ? 2 : 1)) % 12 + 1)).gameObject.SetActive(false);
 
         for (int i = 0; i < _wireInfos.Count; i++)
-            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), ColorMaterials, _expectedCuts, Module);
+            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), ColorMaterials, CopperMaterial, _expectedCuts, Module);
 
         // Code from sircharles
         //Selectable.Children = _wireInfos.Select(wi => wi.Selectable).ToArray();
@@ -191,36 +202,33 @@ public class FollowTheLeaderModule : MonoBehaviour
         //    modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
     }
 
-    static T[] newArray<T>(params T[] array) { return array; }
-
-    static Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>[] rules = newArray<Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>>(
+    static Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>[] rules = Ex.NewArray<Func<WireInfo, WireInfo, WireInfo, WireInfo, bool>>(
         // A or N: The previous wire is not yellow or blue or green.
-        (p3, p2, p1, p0) => !new[] { 1, 3, 4 }.Contains(p1.Color),
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("A: cut if {0} not 1,3,4", p1.Color)); return !new[] { 1, 3, 4 }.Contains(p1.Color); },
         // B or O: The previous wire leads to an even numbered plug.
-        (p3, p2, p1, p0) => p1.ConnectedTo % 2 == 1,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("B: cut if {0} % 2 == 1", p1.ConnectedTo)); return p1.ConnectedTo % 2 == 1; },
         // C or P: The previous wire is cut.
-        (p3, p2, p1, p0) => p1.MustCut,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("C: cut if {0} true", p1.MustCut)); return p1.MustCut; },
         // D or Q: The previous wire is red or blue or black.
-        (p3, p2, p1, p0) => new[] { 0, 4, 5 }.Contains(p1.Color),
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("D: cut if {0} is 0,4,5", p1.Color)); return new[] { 0, 4, 5 }.Contains(p1.Color); },
         // E or R: The three previous wires are not all the same color.
-#warning this is wrong
-        (p3, p2, p1, p0) => p3 == null || p2 == null || p3.Color != p1.Color || p2.Color != p1.Color,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("E: cut if {0},{1},{2} are not same", p1.Color, p2.Color, p3.Color)); return p3.Color != p1.Color || p2.Color != p1.Color; },
         // F or S: Exactly one of the previous two wires are cut.
-        (p3, p2, p1, p0) => p1.MustCut ^ (p2 != null && p2.MustCut),
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("F: cut if {0} xor {1}", p1.MustCut, p2.MustCut)); return p1.MustCut ^ p2.MustCut; },
         // G or T: The previous wire is yellow or white or green.
-        (p3, p2, p1, p0) => new[] { 1, 2, 3 }.Contains(p1.Color),
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("G: cut if {0} is 1,2,3", p1.Color)); return new[] { 1, 2, 3 }.Contains(p1.Color); },
         // H or U: The previous wire is not cut.
-        (p3, p2, p1, p0) => !p1.MustCut,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("H: cut if {0} is false", p1.MustCut)); return !p1.MustCut; },
         // I or V: The previous wire skipped a position.
-        (p3, p2, p1, p0) => p1.DoesSkip,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("I: cut if {0} is true", p1.DoesSkip)); return p1.DoesSkip; },
         // J or W: The previous wire is not white or black or red.
-        (p3, p2, p1, p0) => !new[] { 0, 2, 5 }.Contains(p1.Color),
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("J: cut if {0} not 0,2,5", p1.Color)); return !new[] { 0, 2, 5 }.Contains(p1.Color); },
         // K or X: The previous wire does not lead to a position labeled 6 or less.
-        (p3, p2, p1, p0) => p1.ConnectedTo >= 6,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("K: cut if {0} ≥ 6", p1.ConnectedTo)); return p1.ConnectedTo >= 6; },
         // L or Y: The previous wire is the same color.
-        (p3, p2, p1, p0) => p1.Color == p0.Color,
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("L: cut if {0} = {1}", p0.Color, p1.Color)); return p1.Color == p0.Color; },
         // M or Z: One or neither of the previous two wires are cut.
-        (p3, p2, p1, p0) => !(p1.MustCut && p2 != null && p2.MustCut)
+        (p3, p2, p1, p0) => { Debug.Log(string.Format("M: cut if !({0} && {1})", p1.MustCut, p2.MustCut)); return !(p1.MustCut && p2.MustCut); }
     );
 
     void ActivateModule()
@@ -255,14 +263,14 @@ public class FollowTheLeaderModule : MonoBehaviour
         else if ((curIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == _numBatteries)) != -1)
         {
         }
+        else if (serialFirstNumeral != null && (curIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == serialFirstNumeral.Value - '0')) != -1)
+        {
+        }
         else if (_hasLitCLR)
         {
             _expectedCuts.Clear();
             _expectedCuts.AddRange(_wireInfos.OrderByDescending(w => w.ConnectedFrom));
             return;
-        }
-        else if (serialFirstNumeral != null && (curIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == serialFirstNumeral.Value - '0')) != -1)
-        {
         }
         else if ((curIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 0)) != -1)
         {
@@ -290,18 +298,18 @@ public class FollowTheLeaderModule : MonoBehaviour
             else
             {
                 _wireInfos[curIndex].MustCut = rules[curStep](
-                    i < 3 ? null : _wireInfos[(curIndex + _wireInfos.Count - 3) % _wireInfos.Count],
-                    i < 2 ? null : _wireInfos[(curIndex + _wireInfos.Count - 2) % _wireInfos.Count],
+                    _wireInfos[(curIndex + _wireInfos.Count - 3) % _wireInfos.Count],
+                    _wireInfos[(curIndex + _wireInfos.Count - 2) % _wireInfos.Count],
                     _wireInfos[(curIndex + _wireInfos.Count - 1) % _wireInfos.Count],
                     _wireInfos[curIndex]
                 );
+                curStep = (curStep + rules.Length + (reverse ? -1 : 1)) % rules.Length;
             }
 
             if (_wireInfos[curIndex].MustCut)
                 _expectedCuts.Add(_wireInfos[curIndex]);
 
             curIndex = (curIndex + 1) % _wireInfos.Count;
-            curStep = (curStep + rules.Length + (reverse ? -1 : 1)) % rules.Length;
         }
 
         Debug.Log("[FollowTheLeader] My expectation (" + _expectedCuts.Count + "): cut " + string.Join(", ", _expectedCuts.Select(wi => string.Format("{0}-to-{1} ({2})", wi.ConnectedFrom + 1, wi.ConnectedTo + 1, ColorNames[wi.Color])).ToArray()));

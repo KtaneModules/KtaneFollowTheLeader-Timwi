@@ -30,7 +30,18 @@ namespace FollowTheLeaderNS
 
         sealed class CPC { public Pt ControlBefore, Point, ControlAfter; }
 
-        public static Mesh GenerateWire(System.Random rnd, int lengthIndex, double thickness, bool cut = false)
+        private static Color[] _colors = Ex.NewArray(
+            new Color(0xEA / 255f, 0x00 / 255f, 0x00 / 255f),
+            new Color(0x00 / 255f, 0xAE / 255f, 0x00 / 255f),
+            new Color(0xE8 / 255f, 0xE8 / 255f, 0xE8 / 255f),
+            new Color(0xEE / 255f, 0xEE / 255f, 0x15 / 255f),
+            new Color(0x16 / 255f, 0x78 / 255f, 0xFF / 255f),
+            new Color(0x29 / 255f, 0x29 / 255f, 0x29 / 255f)
+        );
+
+        public enum WirePiece { Uncut, Cut, Copper }
+
+        public static Mesh GenerateWire(System.Random rnd, int lengthIndex, double thickness, int color, WirePiece piece)
         {
             var length = getWireLength(lengthIndex);
             var start = pt(0, 0, 0);
@@ -48,7 +59,7 @@ namespace FollowTheLeaderNS
             var intermediatePoints = newArray(numSegments - 1, i => interpolateStart + (interpolateEnd - interpolateStart) * (i + 1) / numSegments + pt(rnd.NextDouble() - .5, rnd.NextDouble() - .5, rnd.NextDouble() - .5) * _wireMaxSegmentDeviation);
             var deviations = newArray(numSegments - 1, _ => pt(rnd.NextDouble(), rnd.NextDouble(), rnd.NextDouble()) * _wireMaxBézierDeviation);
 
-            if (!cut)
+            if (piece == WirePiece.Uncut)
             {
                 var points =
                     new[] { new { ControlBefore = default(Pt), Point = start, ControlAfter = startControl } }
@@ -57,7 +68,7 @@ namespace FollowTheLeaderNS
                     .SelectConsecutivePairs(false, (one, two) => bézier(one.Point, one.ControlAfter, two.ControlBefore, two.Point, bézierSteps))
                     .SelectMany((x, i) => i == 0 ? x : x.Skip(1))
                     .ToArray();
-                return toMesh(createFaces(false, true, tubeFromCurve(points, thickness, tubeRevSteps)));
+                return toMesh(createFaces(false, true, tubeFromCurve(points, thickness, tubeRevSteps)), _colors[color]);
             }
 
             var partialWire = new Func<IEnumerable<CPC>, IEnumerable<VertexInfo[]>>(pts =>
@@ -69,17 +80,22 @@ namespace FollowTheLeaderNS
 
                 var reserveForCopper = 3;
 
-                var tube = tubeFromCurve(points, thickness, tubeRevSteps).SkipLast(reserveForCopper).ToArray();
-                var capCenter = points[points.Length - 1 - reserveForCopper];
-                var normal = capCenter - points[points.Length - 2 - reserveForCopper];
-                var cap = tube[tube.Length - 1].SelectConsecutivePairs(true, (v1, v2) => new[] { capCenter, v2.Point, v1.Point }.Select(p => new VertexInfo { Point = p, Normal = normal }).ToArray()).ToArray();
-
-                var copper = tubeFromCurve(points.TakeLast(reserveForCopper + 2).ToArray(), thickness / 2, tubeRevSteps).Skip(1).ToArray();
-                var copperCapCenter = points[points.Length - 1];
-                var copperNormal = capCenter - points[points.Length - 2];
-                var copperCap = copper[copper.Length - 1].SelectConsecutivePairs(true, (v1, v2) => new[] { copperCapCenter, v2.Point, v1.Point }.Select(p => new VertexInfo { Point = p, Normal = copperNormal, TextureCopper = true }).ToArray()).ToArray();
-
-                return createFaces(false, true, tube).Concat(cap).Concat(createFaces(false, true, copper)).Concat(copperCap);
+                if (piece == WirePiece.Cut)
+                {
+                    var tube = tubeFromCurve(points, thickness, tubeRevSteps).SkipLast(reserveForCopper).ToArray();
+                    var capCenter = points[points.Length - 1 - reserveForCopper];
+                    var normal = capCenter - points[points.Length - 2 - reserveForCopper];
+                    var cap = tube[tube.Length - 1].SelectConsecutivePairs(true, (v1, v2) => new[] { capCenter, v2.Point, v1.Point }.Select(p => new VertexInfo { Point = p, Normal = normal }).ToArray()).ToArray();
+                    return createFaces(false, true, tube).Concat(cap);
+                }
+                else
+                {
+                    var copper = tubeFromCurve(points.TakeLast(reserveForCopper + 2).ToArray(), thickness / 2, tubeRevSteps).Skip(1).ToArray();
+                    var copperCapCenter = points[points.Length - 1];
+                    var copperNormal = copperCapCenter - points[points.Length - 2];
+                    var copperCap = copper[copper.Length - 1].SelectConsecutivePairs(true, (v1, v2) => new[] { copperCapCenter, v2.Point, v1.Point }.Select(p => new VertexInfo { Point = p, Normal = copperNormal }).ToArray()).ToArray();
+                    return createFaces(false, true, copper).Concat(copperCap);
+                }
             });
 
             var rotAngle = rnd.NextDouble() * 7 + 7;
@@ -97,7 +113,7 @@ namespace FollowTheLeaderNS
                 .Concat(intermediatePoints.Skip(cutOffPoint).Select((p, i) => new CPC { ControlBefore = rot(p + deviations[i + cutOffPoint]), Point = rot(p), ControlAfter = rot(p - deviations[i + cutOffPoint]) }).Reverse());
             var acTube = partialWire(afterCut);
 
-            return toMesh(bcTube.Concat(acTube).ToArray());
+            return toMesh(bcTube.Concat(acTube).ToArray(), _colors[color]);
         }
 
         private static void getBoxCenter(int peg, out double x, out double z)
@@ -119,20 +135,17 @@ namespace FollowTheLeaderNS
         {
             public Pt Point;
             public Pt Normal;
-            public bool TextureCopper;
             public Vector3 V { get { return new Vector3((float) Point.X, (float) Point.Y, (float) Point.Z); } }
             public Vector3 N { get { return new Vector3((float) Normal.X, (float) Normal.Y, (float) Normal.Z); } }
-            public Vector2 T { get { return TextureCopper ? new Vector2(1, 1) : new Vector2(0, 0); } }
         }
 
-        private static Mesh toMesh(VertexInfo[][] triangles)
+        private static Mesh toMesh(VertexInfo[][] triangles, Color color)
         {
             return new Mesh
             {
                 vertices = triangles.SelectMany(t => t).Select(v => v.V).ToArray(),
                 normals = triangles.SelectMany(t => t).Select(v => v.N).ToArray(),
-                triangles = triangles.SelectMany(t => t).Select((v, i) => i).ToArray(),
-                uv = triangles.SelectMany(t => t).Select(v => v.T).ToArray()
+                triangles = triangles.SelectMany(t => t).Select((v, i) => i).ToArray()
             };
         }
 
