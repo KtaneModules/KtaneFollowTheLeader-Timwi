@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FollowTheLeaderNS;
+using FollowTheLeader;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 

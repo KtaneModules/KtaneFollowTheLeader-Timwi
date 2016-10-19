@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FollowTheLeaderNS
+namespace FollowTheLeader
 {
     public struct Pt : IEquatable<Pt>
     {

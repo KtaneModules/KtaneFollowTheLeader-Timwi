@@ -10,9 +10,9 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: -548183353, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
   m_Name: Mission 2 FollowMeEverywhere
-  m_EditorClassIdentifier: 
+  m_EditorClassIdentifier:
   DisplayName: Follow me everywhere
-  Description: "I know all the good places where you want to be. Don\u2019t hesitate."
+  Description: "I know all the good places where you want to be. Don't hesitate."
   GeneratorSetting:
     TimeLimit: 240
     NumStrikes: 1
@@ -21,7 +21,7 @@ MonoBehaviour:
     ComponentPools:
     - Count: 3
       AllowedSources: 2
-      ComponentTypes: 
+      ComponentTypes:
       SpecialComponentType: 0
       ModTypes:
       - FollowTheLeaderModule

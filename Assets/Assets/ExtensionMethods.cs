@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace FollowTheLeaderNS
+namespace FollowTheLeader
 {
     public static class Ex
     {
