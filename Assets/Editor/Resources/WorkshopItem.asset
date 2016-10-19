@@ -14,7 +14,8 @@ MonoBehaviour:
   WorkshopPublishedFileID: 783004078
   Title: Follow the Leader
   Description: "Cut the wire? Don\u2019t cut the wire? Think back to what you did
-    before.\n\nManual PDF: http://clowd.ca/u/2g0"
+    before.\n\nModule created by TheAuthorOfOZ, implemented by Timwi.\n\nManual PDF:
+    http://clowd.ca/u/2g0"
   PreviewImage: {fileID: 2800000, guid: bd5c1f4881f57d54481b44e4c8a7779a, type: 3}
   Tags:
   - Regular Module
