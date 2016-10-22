@@ -21,7 +21,7 @@ public class FollowTheLeaderModule : MonoBehaviour
     public Material CopperMaterial;
     public Mesh[] WireColliderMeshes;
 
-    static string[] ColorNames = { "Red", "Green", "White", "Yellow", "Blue", "Black" };
+    enum Color { Red, Green, White, Yellow, Blue, Black }
 
     class WireInfo
     {
@@ -30,8 +30,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         public int ConnectedTo;
         public bool DoesSkip { get { return ConnectedTo != (ConnectedFrom + 1) % 12; } }
 
-        // 0 = red, 1 = green, 2 = white, 3 = yellow, 4 = blue, 5 = black
-        public int Color;
+        public Color Color;
         public bool MustCut;
         public bool IsCut;
         public string Justification;
@@ -43,12 +42,12 @@ public class FollowTheLeaderModule : MonoBehaviour
             var rnd = new System.Random(seed);
             var lengthIndex = DoesSkip ? ConnectedFrom % 2 : 2;
 
-            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Uncut, false);
-            transform.GetComponent<MeshRenderer>().material = module.ColorMaterials[Color];
+            transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Uncut, false);
+            transform.GetComponent<MeshRenderer>().material = module.ColorMaterials[(int) Color];
 
             rnd = new System.Random(seed);
             var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom + 1, ConnectedTo + 1));
-            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Uncut, true);
+            var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Uncut, true);
             wireHighlight.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             var clone = wireHighlight.Find("Highlight(Clone)");
@@ -56,11 +55,11 @@ public class FollowTheLeaderModule : MonoBehaviour
                 clone.GetComponent<MeshFilter>().mesh = highlightMesh;
 
             rnd = new System.Random(seed);
-            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Cut, false);
+            var cutMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Cut, false);
             rnd = new System.Random(seed);
-            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Cut, true);
+            var cutMeshHighlight = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Cut, true);
             rnd = new System.Random(seed);
-            var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, Color, MeshGenerator.WirePiece.Copper, false);
+            var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Copper, false);
 
             IsCut = false;
             transform.GetComponent<KMSelectable>().OnInteract += delegate
@@ -109,7 +108,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
         public override string ToString()
         {
-            return string.Format("Wire {0}-to-{1} ({2})", ConnectedFrom + 1, ConnectedTo + 1, ColorNames[Color]);
+            return string.Format("Wire {0}-to-{1} ({2})", ConnectedFrom + 1, ConnectedTo + 1, Color.ToString());
         }
 
         public string ToStringFull()
@@ -144,7 +143,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             {
                 ConnectedFrom = currentPeg,
                 ConnectedTo = nextPeg,
-                Color = Rnd.Range(0, 6)
+                Color = (Color) Rnd.Range(0, 6)
             });
             currentPeg = nextPeg;
         }
@@ -224,12 +223,13 @@ public class FollowTheLeaderModule : MonoBehaviour
         public Func<WireInfo, WireInfo, WireInfo, WireInfo, bool> Function;
     }
 
+    static Color[] _whiteBlack = new[] { Color.White, Color.Black };
     static RuleInfo[] rules = Ex.NewArray(
         new RuleInfo
         {
             Name = "A or N",
             Formulation = "the previous wire is not yellow or blue or green",
-            Function = (p3, p2, p1, p0) => !new[] { 1, 3, 4 }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => !new[] { Color.Yellow, Color.Blue, Color.Green }.Contains(p1.Color)
         },
         new RuleInfo
         {
@@ -240,68 +240,68 @@ public class FollowTheLeaderModule : MonoBehaviour
         new RuleInfo
         {
             Name = "C or P",
-            Formulation = "the previous wire is cut",
+            Formulation = "the previous wire should be cut",
             Function = (p3, p2, p1, p0) => p1.MustCut
         },
         new RuleInfo
         {
             Name = "D or Q",
             Formulation = "the previous wire is red or blue or black",
-            Function = (p3, p2, p1, p0) => new[] { 0, 4, 5 }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => new[] { Color.Red, Color.Blue, Color.Black }.Contains(p1.Color)
         },
         new RuleInfo
         {
             Name = "E or R",
-            Formulation = "the three previous wires are not all the same color",
-            Function = (p3, p2, p1, p0) => p3.Color != p1.Color || p2.Color != p1.Color
+            Formulation = "two of the previous three wires shared a color",
+            Function = (p3, p2, p1, p0) => p1.Color == p2.Color || p1.Color == p3.Color || p2.Color == p3.Color,
         },
         new RuleInfo
         {
             Name = "F or S",
-            Formulation = "exactly one of the previous two wires are cut",
-            Function = (p3, p2, p1, p0) => p1.MustCut ^ p2.MustCut
+            Formulation = "exactly one of the previous two wires were the same color as this wire",
+            Function = (p3, p2, p1, p0) => (p0.Color == p1.Color) ^ (p0.Color == p2.Color),
         },
         new RuleInfo
         {
             Name = "G or T",
             Formulation = "the previous wire is yellow or white or green",
-            Function = (p3, p2, p1, p0) => new[] { 1, 2, 3 }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => new[] { Color.Yellow, Color.White, Color.Green }.Contains(p1.Color)
         },
         new RuleInfo
         {
             Name = "H or U",
-            Formulation = "the previous wire is not cut",
+            Formulation = "the previous wire should not be cut",
             Function = (p3, p2, p1, p0) => !p1.MustCut
         },
         new RuleInfo
         {
             Name = "I or V",
-            Formulation = "the previous wire skipped a position",
+            Formulation = "the previous wire skips a plug",
             Function = (p3, p2, p1, p0) => p1.DoesSkip
         },
         new RuleInfo
         {
             Name = "J or W",
             Formulation = "the previous wire is not white or black or red",
-            Function = (p3, p2, p1, p0) => !new[] { 0, 2, 5 }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => !new[] { Color.White, Color.Black, Color.Red }.Contains(p1.Color)
         },
         new RuleInfo
         {
             Name = "K or X",
-            Formulation = "the previous wire does not lead to a position labeled 6 or less",
-            Function = (p3, p2, p1, p0) => p1.ConnectedTo >= 6
+            Formulation = "the previous two wires are different colors",
+            Function = (p3, p2, p1, p0) => p1.Color != p2.Color,
         },
         new RuleInfo
         {
             Name = "L or Y",
-            Formulation = "the previous wire is the same color",
-            Function = (p3, p2, p1, p0) => p1.Color == p0.Color
+            Formulation = "the previous wire does not lead to a position labeled 6 or less",
+            Function = (p3, p2, p1, p0) => p1.ConnectedTo > 5,
         },
         new RuleInfo
         {
             Name = "M or Z",
-            Formulation = "one or neither of the previous two wires are cut",
-            Function = (p3, p2, p1, p0) => !(p1.MustCut && p2.MustCut)
+            Formulation = "exactly one or neither of the previous two wires are white or black",
+            Function = (p3, p2, p1, p0) => !(_whiteBlack.Contains(p1.Color) && _whiteBlack.Contains(p2.Color))
         }
     );
 
@@ -361,7 +361,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         // The starting step corresponds to the first letter in the serial number.
         var curStep = _serial.Where(ch => ch >= 'A' && ch <= 'Z').Select(ch => ch - 'A').FirstOrDefault() % rules.Length;
         // If the wire at the starting plug is red, green, or white, progress through the steps in reverse alphabetical order instead.
-        var reverse = new[] { 0, 1, 2 }.Contains(_wireInfos[curIndex].Color);
+        var reverse = new[] { Color.Red, Color.Green, Color.White }.Contains(_wireInfos[curIndex].Color);
 
         _expectedCuts.Clear();
 
