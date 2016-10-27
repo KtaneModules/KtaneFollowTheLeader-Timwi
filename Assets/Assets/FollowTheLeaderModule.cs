@@ -66,8 +66,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             {
                 if (IsCut)
                 {
-                    Debug.LogFormat("[FollowTheLeader] You just cut a wire that is already cut ({0}).", this);
-                    module.Module.HandleStrike();
+                    Debug.LogFormat("[FollowTheLeader] You tried to cut a wire that is already cut ({0}).", this);
                     return false;
                 }
 
