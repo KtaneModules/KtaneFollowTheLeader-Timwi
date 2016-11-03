@@ -34,9 +34,12 @@ public class FollowTheLeaderModule : MonoBehaviour
         public bool MustCut;
         public bool IsCut;
         public string Justification;
+        public KMSelectable Selectable;
 
         public void Activate(Transform transform, FollowTheLeaderModule module)
         {
+            Selectable = transform.GetComponent<KMSelectable>();
+
             // The irony of using one RNG to seed another RNG isn’t lost on me
             var seed = Rnd.Range(0, int.MaxValue);
             var rnd = new System.Random(seed);
@@ -209,10 +212,11 @@ public class FollowTheLeaderModule : MonoBehaviour
             _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this);
 
         // Code from sircharles
-        //Selectable.Children = _wireInfos.Select(wi => wi.Selectable).ToArray();
-        //var modSelectable = GetComponent("ModSelectable");
-        //if (modSelectable != null)
-        //    modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
+        Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
+        Selectable.ChildRowLength = Selectable.Children.Length;
+        var modSelectable = GetComponent("ModSelectable");
+        if (modSelectable != null)
+            modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
     }
 
     sealed class RuleInfo
