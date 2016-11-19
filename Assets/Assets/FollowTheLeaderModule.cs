@@ -73,6 +73,7 @@ public class FollowTheLeaderModule : MonoBehaviour
                     return false;
                 }
 
+                Selectable.AddInteractionPunch();
                 module.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.WireSnip, transform);
 
                 IsCut = true;
