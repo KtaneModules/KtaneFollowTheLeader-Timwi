@@ -359,7 +359,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         else
             startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 1);
 
-        Debug.Log("[Follow the Leader] Starting at wire: " + _wireInfos[startIndex]);
+        Debug.Log("[FollowTheLeader] Starting at wire: " + _wireInfos[startIndex]);
 
         var curIndex = startIndex;
         // The starting step corresponds to the first letter in the serial number.
