@@ -3162,12 +3162,12 @@ MonoBehaviour:
   - {fileID: 11456534}
   - {fileID: 11448914}
   IsPassThrough: 0
-  ChildRowLength: 1
+  ChildRowLength: 24
   Highlight: {fileID: 11464240}
   SelectableColliders: []
   DefaultSelectableIndex: 0
-  AllowSelectionWrapX: 0
-  AllowSelectionWrapY: 0
+  AllowSelectionWrapX: 1
+  AllowSelectionWrapY: 1
   ForceSelectionHighlight: 0
   ForceInteractionHighlight: 0
 --- !u!114 &11421212

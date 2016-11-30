@@ -212,12 +212,9 @@ public class FollowTheLeaderModule : MonoBehaviour
         for (int i = 0; i < _wireInfos.Count; i++)
             _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this);
 
-        // Code from sircharles
         Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
         Selectable.ChildRowLength = Selectable.Children.Length;
-        var modSelectable = GetComponent("ModSelectable");
-        if (modSelectable != null)
-            modSelectable.GetType().GetMethod("CopySettingsFromProxy").Invoke(modSelectable, null);
+        Selectable.UpdateChildren();
     }
 
     sealed class RuleInfo
