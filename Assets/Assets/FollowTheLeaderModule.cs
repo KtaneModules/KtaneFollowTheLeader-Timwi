@@ -23,6 +23,9 @@ public class FollowTheLeaderModule : MonoBehaviour
 
     enum Color { Red, Green, White, Yellow, Blue, Black }
 
+    private static int _moduleIdCounter = 1;
+    private int _moduleId;
+
     class WireInfo
     {
         // 0–11
@@ -69,7 +72,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             {
                 if (IsCut)
                 {
-                    Debug.LogFormat("[FollowTheLeader] You tried to cut a wire that is already cut ({0}).", this);
+                    Debug.LogFormat("[FollowTheLeader #{1}] You tried to cut a wire that is already cut ({0}).", this, module._moduleId);
                     return false;
                 }
 
@@ -93,14 +96,14 @@ public class FollowTheLeaderModule : MonoBehaviour
 
                 if (module._expectedCuts.Count == 0 || module._expectedCuts[0] != this)
                 {
-                    Debug.LogFormat("[FollowTheLeader] Strike because you cut {0} but I expected {1}.", this, module._expectedCuts.Count == 0 ? "no more wires to be cut" : module._expectedCuts[0].ToString());
+                    Debug.LogFormat("[FollowTheLeader #{2}] Strike because you cut {0} but I expected {1}.", this, module._expectedCuts.Count == 0 ? "no more wires to be cut" : module._expectedCuts[0].ToString(), module._moduleId);
                     module.Module.HandleStrike();
                 }
                 else
                 {
                     while (module._expectedCuts.Count > 0 && module._expectedCuts[0].IsCut)
                         module._expectedCuts.RemoveAt(0);
-                    Debug.LogFormat("[FollowTheLeader] Cutting {0} was correct. Expectation now is{1}", this, module._expectedCuts.Count == 0 ? " that you’re done." : ":\n" + string.Join("\n", module._expectedCuts.Select(wi => wi.ToString()).ToArray()));
+                    Debug.LogFormat("[FollowTheLeader #{2}] Cutting {0} was correct. Expectation now is{1}", this, module._expectedCuts.Count == 0 ? " that you’re done." : ":\n" + string.Join("\n", module._expectedCuts.Select(wi => wi.ToString()).ToArray()), module._moduleId);
                     if (module._expectedCuts.Count == 0)
                         module.Module.HandlePass();
                 }
@@ -130,6 +133,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
     void Start()
     {
+        _moduleId = _moduleIdCounter++;
         Module.OnActivate += ActivateModule;
 
         _expectedCuts = new List<WireInfo>();
@@ -324,26 +328,24 @@ public class FollowTheLeaderModule : MonoBehaviour
             _hasLitCLR = Bomb.GetOnIndicators().Contains("CLR");
         }
 
-        Debug.Log("[FollowTheLeader] Serial number is " + _serial);
-        Debug.Log("[FollowTheLeader] Number of batteries: " + _numBatteries);
-        Debug.Log("[FollowTheLeader] Has RJ-45 port: " + (_hasRJ ? "Yes" : "No"));
-        Debug.Log("[FollowTheLeader] Has lit CLR indicator: " + (_hasLitCLR ? "Yes" : "No"));
-
         // Figure out the starting wire (as index into wireInfos, rather than peg number)
         int startIndex;
         var serialFirstNumeral = _serial.Where(ch => ch >= '0' && ch <= '9').FirstOrNull();
         if (_hasRJ && (startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 3 && wi.ConnectedTo == 4)) != -1)
         {
+            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because RJ port.", _moduleId, _wireInfos[startIndex]);
         }
         else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == _numBatteries)) != -1)
         {
+            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because number of batteries.", _moduleId, _wireInfos[startIndex]);
         }
         else if (serialFirstNumeral != null && (startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == serialFirstNumeral.Value - '0')) != -1)
         {
+            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because serial number’s first numeral.", _moduleId, _wireInfos[startIndex]);
         }
         else if (_hasLitCLR)
         {
-            Debug.Log("[FollowTheLeader] CLR rule: cut everything in reverse order.");
+            Debug.Log("[FollowTheLeader] Cut everything in reverse order because lit CLR.");
             foreach (var wi in _wireInfos)
                 wi.Justification = "CLR rule.";
             _expectedCuts.Clear();
@@ -352,11 +354,13 @@ public class FollowTheLeaderModule : MonoBehaviour
         }
         else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 0)) != -1)
         {
+            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because no other rule applies.", _moduleId, _wireInfos[startIndex]);
         }
         else
+        {
             startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 1);
-
-        Debug.Log("[FollowTheLeader] Starting at wire: " + _wireInfos[startIndex]);
+            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because no other rule applies.", _moduleId, _wireInfos[startIndex]);
+        }
 
         var curIndex = startIndex;
         // The starting step corresponds to the first letter in the serial number.
@@ -393,8 +397,8 @@ public class FollowTheLeaderModule : MonoBehaviour
             curIndex = (curIndex + 1) % _wireInfos.Count;
         }
 
-        Debug.Log("[FollowTheLeader] Wire state:\n" + string.Join("\n", Enumerable.Range(0, _wireInfos.Count).Select(i => _wireInfos[(i + startIndex) % _wireInfos.Count].ToStringFull()).ToArray()));
+        Debug.LogFormat("[FollowTheLeader #{0}] Wire state:\n{1}", _moduleId, string.Join("\n", Enumerable.Range(0, _wireInfos.Count).Select(i => _wireInfos[(i + startIndex) % _wireInfos.Count].ToStringFull()).ToArray()));
         end:
-        Debug.Log("[FollowTheLeader] Expectation:\n" + string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
+        Debug.LogFormat("[FollowTheLeader #{0}] Expectation:\n{1}", _moduleId, string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
     }
 }
