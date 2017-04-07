@@ -68,7 +68,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             var copperMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) Color, MeshGenerator.WirePiece.Copper, false);
 
             IsCut = false;
-            transform.GetComponent<KMSelectable>().OnInteract += delegate
+            Selectable.OnInteract += delegate
             {
                 if (IsCut)
                 {
@@ -400,5 +400,24 @@ public class FollowTheLeaderModule : MonoBehaviour
         Debug.LogFormat("[FollowTheLeader #{0}] Wire state:\n{1}", _moduleId, string.Join("\n", Enumerable.Range(0, _wireInfos.Count).Select(i => _wireInfos[(i + startIndex) % _wireInfos.Count].ToStringFull()).ToArray()));
         end:
         Debug.LogFormat("[FollowTheLeader #{0}] Expectation:\n{1}", _moduleId, string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
+    }
+
+    KMSelectable[] ProcessTwitchCommand(string command)
+    {
+        if (!command.StartsWith("cut ", StringComparison.OrdinalIgnoreCase))
+            return null;
+        command = command.Substring(4);
+        var wires = new List<KMSelectable>();
+        foreach (var cmd in command.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            int number;
+            if (!int.TryParse(cmd, out number))
+                return null;
+            var wireInfo = _wireInfos.FirstOrDefault(wi => wi.ConnectedFrom + 1 == number);
+            if (wireInfo == null)
+                return null;
+            wires.Add(wireInfo.Selectable);
+        }
+        return wires.ToArray();
     }
 }
