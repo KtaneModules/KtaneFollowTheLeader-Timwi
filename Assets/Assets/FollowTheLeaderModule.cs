@@ -402,6 +402,10 @@ public class FollowTheLeaderModule : MonoBehaviour
         Debug.LogFormat("[FollowTheLeader #{0}] Expectation:\n{1}", _moduleId, string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
     }
 
+#pragma warning disable 414
+    private string TwitchHelpMessage = @"Cut the wires in a specific order with “!{0} cut 4 6 9 10 1 2”.";
+#pragma warning restore 414
+
     KMSelectable[] ProcessTwitchCommand(string command)
     {
         if (!command.StartsWith("cut ", StringComparison.OrdinalIgnoreCase))

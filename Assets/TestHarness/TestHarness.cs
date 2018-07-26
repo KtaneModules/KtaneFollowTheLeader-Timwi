@@ -1,10 +1,11 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using Newtonsoft.Json;
-using UnityEditor;
 using UnityEngine;
+using EdgeworkConfigurator;
 
 public class FakeBombInfo : MonoBehaviour
 {
@@ -17,52 +18,58 @@ public class FakeBombInfo : MonoBehaviour
     {
         List<string> ports;
 
-        public PortWidget()
+        public PortWidget(List<string> portNames=null)
         {
             ports = new List<string>();
             string portList = "";
-
-            if (Random.value > 0.5)
+            if (portNames == null)
             {
                 if (Random.value > 0.5)
                 {
-                    ports.Add("Parallel");
-                    portList += "Parallel";
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("Parallel");
+                        portList += "Parallel";
+                    }
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("Serial");
+                        if (portList.Length > 0) portList += ", ";
+                        portList += "Serial";
+                    }
                 }
-                if (Random.value > 0.5)
+                else
                 {
-                    ports.Add("Serial");
-                    if (portList.Length > 0) portList += ", ";
-                    portList += "Serial";
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("DVI");
+                        portList += "DVI";
+                    }
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("PS2");
+                        if (portList.Length > 0) portList += ", ";
+                        portList += "PS2";
+                    }
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("RJ45");
+                        if (portList.Length > 0) portList += ", ";
+                        portList += "RJ45";
+                    }
+                    if (Random.value > 0.5)
+                    {
+                        ports.Add("StereoRCA");
+                        if (portList.Length > 0) portList += ", ";
+                        portList += "StereoRCA";
+                    }
                 }
             }
             else
             {
-                if (Random.value > 0.5)
-                {
-                    ports.Add("DVI");
-                    portList += "DVI";
-                }
-                if (Random.value > 0.5)
-                {
-                    ports.Add("PS2");
-                    if (portList.Length > 0) portList += ", ";
-                    portList += "PS2";
-                }
-                if (Random.value > 0.5)
-                {
-                    ports.Add("RJ45");
-                    if (portList.Length > 0) portList += ", ";
-                    portList += "RJ45";
-                }
-                if (Random.value > 0.5)
-                {
-                    ports.Add("StereoRCA");
-                    if (portList.Length > 0) portList += ", ";
-                    portList += "StereoRCA";
-                }
+                ports = portNames;
+                portList = string.Join(", ", portNames.ToArray());
             }
-
             if (portList.Length == 0) portList = "Empty plate";
             Debug.Log("Added port widget: " + portList);
         }
@@ -71,7 +78,7 @@ public class FakeBombInfo : MonoBehaviour
         {
             if (key == KMBombInfo.QUERYKEY_GET_PORTS)
             {
-                return JsonConvert.SerializeObject((object) new Dictionary<string, List<string>>()
+                return JsonConvert.SerializeObject((object)new Dictionary<string, List<string>>()
                 {
                     {
                         "presentPorts", ports
@@ -84,7 +91,8 @@ public class FakeBombInfo : MonoBehaviour
 
     public class IndicatorWidget : Widget
     {
-        static List<string> possibleValues = new List<string>(){
+        static List<string> possibleValues = new List<string>()
+        {
             "SND","CLR","CAR",
             "IND","FRQ","SIG",
             "NSA","MSA","TRN",
@@ -94,12 +102,34 @@ public class FakeBombInfo : MonoBehaviour
         private string val;
         private bool on;
 
-        public IndicatorWidget()
+        public IndicatorWidget(string label=null, IndicatorState state=IndicatorState.RANDOM)
         {
-            int pos = Random.Range(0, possibleValues.Count);
-            val = possibleValues[pos];
-            possibleValues.RemoveAt(pos);
-            on = Random.value > 0.4f;
+            if (label == null)
+            {
+                int pos = Random.Range(0, possibleValues.Count);
+                val = possibleValues[pos];
+                possibleValues.RemoveAt(pos);
+            }
+            else
+            {
+                if (possibleValues.Contains(label))
+                {
+                    val = label;
+                    possibleValues.Remove(label);
+                }
+                else
+                {
+                    val = "NLL";
+                }
+            }
+            if (state == IndicatorState.RANDOM)
+            {
+                on = Random.value > 0.4f;
+            }
+            else
+            {
+                on = state == IndicatorState.ON ? true : false;
+            }
 
             Debug.Log("Added indicator widget: " + val + " is " + (on ? "ON" : "OFF"));
         }
@@ -108,7 +138,7 @@ public class FakeBombInfo : MonoBehaviour
         {
             if (key == KMBombInfo.QUERYKEY_GET_INDICATOR)
             {
-                return JsonConvert.SerializeObject((object) new Dictionary<string, string>()
+                return JsonConvert.SerializeObject((object)new Dictionary<string, string>()
                 {
                     {
                         "label", val
@@ -126,9 +156,16 @@ public class FakeBombInfo : MonoBehaviour
     {
         private int batt;
 
-        public BatteryWidget()
+        public BatteryWidget(int battCount=-1)
         {
-            batt = Random.Range(1, 3);
+            if (battCount == -1)
+            {
+                batt = Random.Range(1, 3);
+            }
+            else
+            {
+                batt = battCount;
+            }
 
             Debug.Log("Added battery widget: " + batt);
         }
@@ -137,7 +174,7 @@ public class FakeBombInfo : MonoBehaviour
         {
             if (key == KMBombInfo.QUERYKEY_GET_BATTERIES)
             {
-                return JsonConvert.SerializeObject((object) new Dictionary<string, int>()
+                return JsonConvert.SerializeObject((object)new Dictionary<string, int>()
                 {
                     {
                         "numbatteries", batt
@@ -147,39 +184,36 @@ public class FakeBombInfo : MonoBehaviour
             else return null;
         }
     }
-    public Widget[] widgets;
 
-    void Awake()
+    public class CustomWidget : Widget
     {
-        widgets = new Widget[5];
-        for (int a = 0; a < 5; a++)
+        private string key;
+        private string data;
+
+        public CustomWidget(string queryKey, string dataString)
         {
-            int r = Random.Range(0, 3);
-            if (r == 0) widgets[a] = new PortWidget();
-            else if (r == 1) widgets[a] = new IndicatorWidget();
-            else widgets[a] = new BatteryWidget();
+            key = queryKey;
+            data = dataString;
+
+            Debug.Log("Added custom widget (" + key + "): " + data);
         }
 
-        char[] possibleCharArray = new char[35]
+        public override string GetResult(string query, string passedData)
         {
-            'A','B','C','D','E',
-            'F','G','H','I','J',
-            'K','L','M','N','E',
-            'P','Q','R','S','T',
-            'U','V','W','X','Z',
-            '0','1','2','3','4',
-            '5','6','7','8','9'
-        };
-        string str1 = string.Empty;
-        for (int index = 0; index < 2; ++index) str1 = str1 + possibleCharArray[Random.Range(0, possibleCharArray.Length)];
-        string str2 = str1 + (object) Random.Range(0, 10);
-        for (int index = 3; index < 5; ++index) str2 = str2 + possibleCharArray[Random.Range(0, possibleCharArray.Length - 10)];
-        serial = str2 + Random.Range(0, 10);
-
-        Debug.Log("Serial: " + serial);
+            if (query == key)
+            {
+                return data;
+            }
+            else
+            {
+                return null;
+            }
+        }
     }
 
-    float startupTime = 3f;
+    public Widget[] widgets;
+
+    float startupTime = .5f;
 
     public delegate void LightsOn();
     public LightsOn ActivateLights;
@@ -228,18 +262,18 @@ public class FakeBombInfo : MonoBehaviour
         if (timeLeft < 60)
         {
             if (timeLeft < 10) time += "0";
-            time += (int) timeLeft;
+            time += (int)timeLeft;
             time += ".";
-            int s = (int) (timeLeft * 100);
+            int s = (int)(timeLeft * 100);
             if (s < 10) time += "0";
             time += s;
         }
         else
         {
             if (timeLeft < 600) time += "0";
-            time += (int) timeLeft / 60;
+            time += (int)timeLeft / 60;
             time += ":";
-            int s = (int) timeLeft % 60;
+            int s = (int)timeLeft % 60;
             if (s < 10) time += "0";
             time += s;
         }
@@ -283,7 +317,7 @@ public class FakeBombInfo : MonoBehaviour
         List<string> moduleList = new List<string>();
         foreach (KeyValuePair<KMBombModule, bool> m in modules)
         {
-            if (m.Value) moduleList.Add(m.Key.ModuleDisplayName);
+            if(m.Value) moduleList.Add(m.Key.ModuleDisplayName);
         }
         return moduleList;
     }
@@ -293,7 +327,7 @@ public class FakeBombInfo : MonoBehaviour
         List<string> responses = new List<string>();
         if (queryKey == KMBombInfo.QUERYKEY_GET_SERIAL_NUMBER)
         {
-            responses.Add(JsonConvert.SerializeObject((object) new Dictionary<string, string>()
+            responses.Add(JsonConvert.SerializeObject((object)new Dictionary<string, string>()
             {
                 {
                     "serial", serial
@@ -305,6 +339,8 @@ public class FakeBombInfo : MonoBehaviour
             string r = w.GetResult(queryKey, queryInfo);
             if (r != null) responses.Add(r);
         }
+        if (queryKey == "Unity")
+            responses.Add(JsonConvert.SerializeObject(new Dictionary<string, bool>() { { "Unity", true } }));
         return responses;
     }
 
@@ -354,6 +390,184 @@ public class FakeBombInfo : MonoBehaviour
     {
         if (OnLights != null) OnLights(false);
     }
+
+    readonly char[] SerialNumberPossibleCharArray = new char[35]
+    {
+        'A','B','C','D','E',
+        'F','G','H','I','J',
+        'K','L','M','N','E',
+        'P','Q','R','S','T',
+        'U','V','W','X','Z',
+        '0','1','2','3','4',
+        '5','6','7','8','9'
+    };
+
+    /// <summary>
+    /// Sets up the edgework of the FakeBombInfo according to the provided edgework configuration.
+    /// </summary>
+    /// <param name="config"></param>
+    public void SetupEdgework(EdgeworkConfiguration config)
+    {
+        if (config == null) 
+        {
+            const int numWidgets = 5;
+            widgets = new Widget[numWidgets];
+            for (int a = 0; a < numWidgets; a++) 
+            {
+                int r = Random.Range(0, 3);
+                if (r == 0) widgets[a] = new PortWidget();
+                else if (r == 1) widgets[a] = new IndicatorWidget();
+                else widgets[a] = new BatteryWidget();
+            }
+            string str1 = string.Empty;
+            for (int index = 0; index < 2; ++index) str1 = str1 + SerialNumberPossibleCharArray[Random.Range(0, SerialNumberPossibleCharArray.Length)];
+            string str2 = str1 + (object)Random.Range(0, 10);
+            for (int index = 3; index < 5; ++index) str2 = str2 + SerialNumberPossibleCharArray[Random.Range(0, SerialNumberPossibleCharArray.Length - 10)];
+            serial = str2 + Random.Range(0, 10);
+
+            Debug.Log("Serial: " + serial);
+        } 
+        else
+        {
+            if (config.SerialNumberType == SerialNumberType.RANDOM_NORMAL)
+            {
+                string str1 = string.Empty;
+                for (int index = 0; index < 2; ++index) str1 = str1 + SerialNumberPossibleCharArray[Random.Range(0, SerialNumberPossibleCharArray.Length)];
+                string str2 = str1 + (object)Random.Range(0, 10);
+                for (int index = 3; index < 5; ++index) str2 = str2 + SerialNumberPossibleCharArray[Random.Range(0, SerialNumberPossibleCharArray.Length - 10)];
+                serial = str2 + Random.Range(0, 10);
+            } 
+            else if (config.SerialNumberType == SerialNumberType.RANDOM_ANY)
+            {
+                string res = string.Empty;
+                for (int index = 0; index < 6; ++index) res = res + SerialNumberPossibleCharArray[Random.Range(0, SerialNumberPossibleCharArray.Length)];
+                serial = res;
+            }
+            else
+            {
+                serial = config.CustomSerialNumber;
+            }
+            Debug.Log("Serial: " + serial);
+
+            List<Widget> widgetsResult = new List<Widget>();
+            List<THWidget> RandomIndicators = new List<THWidget>();
+            List<THWidget> RandomWidgets = new List<THWidget>();
+            foreach (THWidget widgetConfig in config.Widgets)
+            {
+                if (widgetConfig.Type == WidgetType.RANDOM)
+                {
+                    RandomWidgets.Add(widgetConfig);
+                }
+                else if (widgetConfig.Type == WidgetType.INDICATOR && widgetConfig.IndicatorLabel == IndicatorLabel.RANDOM)
+                {
+                    RandomIndicators.Add(widgetConfig);
+                }
+                else
+                {
+                    switch (widgetConfig.Type)
+                    {
+                        case WidgetType.BATTERY:
+                            for (int i = 0; i < widgetConfig.Count; i++)
+                            {
+                                if (widgetConfig.BatteryType == BatteryType.CUSTOM)
+                                {
+                                    widgetsResult.Add(new BatteryWidget(widgetConfig.BatteryCount));
+                                } 
+                                else if (widgetConfig.BatteryType == BatteryType.RANDOM)
+                                {
+                                    widgetsResult.Add(new BatteryWidget(Random.Range(widgetConfig.MinBatteries, widgetConfig.MaxBatteries + 1)));
+                                }
+                                else
+                                {
+                                    widgetsResult.Add(new BatteryWidget((int)widgetConfig.BatteryType));
+                                }
+                            }
+                            break;
+                        case WidgetType.INDICATOR:
+                            if (widgetConfig.IndicatorLabel == IndicatorLabel.CUSTOM)
+                            {
+                                widgetsResult.Add(new IndicatorWidget(widgetConfig.CustomLabel, widgetConfig.IndicatorState));
+                            }
+                            else
+                            {
+                                widgetsResult.Add(new IndicatorWidget(widgetConfig.IndicatorLabel.ToString(), widgetConfig.IndicatorState));
+                            }
+                            break;
+                        case WidgetType.PORT_PLATE:
+                            for (int i = 0; i < widgetConfig.Count; i++)
+                            {
+                                List<string> ports = new List<string>();
+                                if (widgetConfig.PortPlateType == PortPlateType.CUSTOM)
+                                {
+                                    if (widgetConfig.DVIPort) ports.Add("DVI");
+                                    if (widgetConfig.PS2Port) ports.Add("PS2");
+                                    if (widgetConfig.RJ45Port) ports.Add("RJ45");
+                                    if (widgetConfig.StereoRCAPort) ports.Add("StereoRCA");
+                                    if (widgetConfig.ParallelPort) ports.Add("Parallel");
+                                    if (widgetConfig.SerialPort) ports.Add("Serial");
+                                    ports.AddRange(widgetConfig.CustomPorts);
+                                }
+                                else if (widgetConfig.PortPlateType == PortPlateType.RANDOM_ANY)
+                                {
+                                    if (Random.value > 0.5f) ports.Add("DVI");
+                                    if (Random.value > 0.5f) ports.Add("PS2");
+                                    if (Random.value > 0.5f) ports.Add("RJ45");
+                                    if (Random.value > 0.5f) ports.Add("StereoRCA");
+                                    if (Random.value > 0.5f) ports.Add("Parallel");
+                                    if (Random.value > 0.5f) ports.Add("Serial");
+                                    foreach (string port in widgetConfig.CustomPorts)
+                                    {
+                                        if (Random.value > 0.5f) ports.Add(port);
+                                    }
+                                }
+                                else
+                                {
+                                    if (Random.value > 0.5)
+                                    {
+                                        if (Random.value > 0.5) ports.Add("Parallel");
+                                        if (Random.value > 0.5) ports.Add("Serial");
+                                    }
+                                    else
+                                    {
+                                        if (Random.value > 0.5) ports.Add("DVI");
+                                        if (Random.value > 0.5) ports.Add("PS2");
+                                        if (Random.value > 0.5) ports.Add("RJ45");
+                                        if (Random.value > 0.5) ports.Add("StereoRCA");
+                                    }
+                                    foreach (string port in widgetConfig.CustomPorts)
+                                    {
+                                        if (Random.value > 0.5f) ports.Add(port);
+                                    }
+                                }
+                                widgetsResult.Add(new PortWidget(ports));
+                            }
+                            break;
+                        case WidgetType.CUSTOM:
+                            for (int i = 0; i < widgetConfig.Count; i++)
+                            {
+                                widgetsResult.Add(new CustomWidget(widgetConfig.CustomQueryKey, widgetConfig.CustomData));
+                            }
+                            break;
+                    }
+                }
+            }
+            foreach (THWidget randIndWidget in RandomIndicators)
+            {
+                widgetsResult.Add(new IndicatorWidget());
+            }
+            foreach (THWidget randIndWidget in RandomWidgets)
+            {
+                for (int i = 0; i < randIndWidget.Count; i++)
+                {
+                    int r = Random.Range(0, 3);
+                    if (r == 0) widgetsResult.Add(new BatteryWidget());
+                    else if (r == 1) widgetsResult.Add(new IndicatorWidget());
+                    else widgetsResult.Add(new PortWidget());
+                }
+            }
+            widgets = widgetsResult.ToArray();
+        }
+    }
 }
 
 public class TestHarness : MonoBehaviour
@@ -365,12 +579,18 @@ public class TestHarness : MonoBehaviour
     TestSelectableArea currentSelectableArea;
 
     AudioSource audioSource;
-    List<AudioClip> audioClips;
+    public List<AudioClip> AudioClips;
+
+    public EdgeworkConfiguration EdgeworkConfiguration;
 
     void Awake()
     {
+        PrepareLights();
+
         fakeInfo = gameObject.AddComponent<FakeBombInfo>();
-        fakeInfo.ActivateLights += delegate ()
+        fakeInfo.SetupEdgework(EdgeworkConfiguration);
+
+        fakeInfo.ActivateLights += delegate()
         {
             TurnLightsOn();
             fakeInfo.OnLightsOn();
@@ -392,7 +612,7 @@ public class TestHarness : MonoBehaviour
             {
                 if (f.FieldType.Equals(typeof(KMBombInfo)))
                 {
-                    KMBombInfo component = (KMBombInfo) f.GetValue(s);
+                    KMBombInfo component = (KMBombInfo)f.GetValue(s);
                     component.TimeHandler += new KMBombInfo.GetTimeHandler(fakeInfo.GetTime);
                     component.FormattedTimeHandler += new KMBombInfo.GetFormattedTimeHandler(fakeInfo.GetFormattedTime);
                     component.StrikesHandler += new KMBombInfo.GetStrikesHandler(fakeInfo.GetStrikes);
@@ -405,14 +625,14 @@ public class TestHarness : MonoBehaviour
                 }
                 if (f.FieldType.Equals(typeof(KMGameInfo)))
                 {
-                    KMGameInfo component = (KMGameInfo) f.GetValue(s);
+                    KMGameInfo component = (KMGameInfo)f.GetValue(s);
                     component.OnLightsChange += new KMGameInfo.KMLightsChangeDelegate(fakeInfo.OnLights);
                     //component.OnAlarmClockChange += new KMGameInfo.KMAlarmClockChangeDelegate(fakeInfo.OnAlarm);
                     continue;
                 }
                 if (f.FieldType.Equals(typeof(KMGameCommands)))
                 {
-                    KMGameCommands component = (KMGameCommands) f.GetValue(s);
+                    KMGameCommands component = (KMGameCommands)f.GetValue(s);
                     component.OnCauseStrike += new KMGameCommands.KMCauseStrikeDelegate(fakeInfo.HandleStrike);
                     continue;
                 }
@@ -431,9 +651,8 @@ public class TestHarness : MonoBehaviour
                 if (f.FieldType.Equals(typeof(KMBombInfo)))
                 {
                     KMBombInfo component = (KMBombInfo) f.GetValue(s);
-                    if (component.OnBombExploded != null) fakeInfo.Detonate += new FakeBombInfo.OnDetonate(component.OnBombExploded);
-                    if (component.OnBombSolved != null) fakeInfo.HandleSolved += new FakeBombInfo.OnSolved(component.OnBombSolved);
-                    continue;
+                    fakeInfo.Detonate += delegate { if (component.OnBombExploded != null) component.OnBombExploded(); };
+                    fakeInfo.HandleSolved += delegate { if (component.OnBombSolved != null) component.OnBombSolved(); };
                 }
             }
         }
@@ -497,21 +716,6 @@ public class TestHarness : MonoBehaviour
 
         currentSelectable.ActivateChildSelectableAreas();
 
-
-        //Load all the audio clips in the asset database
-        audioClips = new List<AudioClip>();
-        string[] audioClipAssetGUIDs = AssetDatabase.FindAssets("t:AudioClip");
-
-        foreach (var guid in audioClipAssetGUIDs)
-        {
-            AudioClip clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
-
-            if (clip != null)
-            {
-                audioClips.Add(clip);
-            }
-        }
-
         audioSource = gameObject.AddComponent<AudioSource>();
         KMAudio[] kmAudios = FindObjectsOfType<KMAudio>();
         foreach (KMAudio kmAudio in kmAudios)
@@ -522,16 +726,15 @@ public class TestHarness : MonoBehaviour
 
     protected void PlaySoundHandler(string clipName, Transform t)
     {
-        if (audioClips.Count > 0)
-        {
-            AudioClip clip = audioClips.Where(a => a.name == clipName).First();
+        AudioClip clip = AudioClips == null ? null : AudioClips.Where(a => a.name == clipName).FirstOrDefault();
 
-            if (clip != null)
-            {
-                audioSource.transform.position = t.position;
-                audioSource.PlayOneShot(clip);
-            }
+        if (clip != null)
+        {
+            audioSource.transform.position = t.position;
+            audioSource.PlayOneShot(clip);
         }
+        else
+            Debug.Log("Audio clip not found: " + clipName);
     }
 
     void Update()
@@ -660,14 +863,15 @@ public class TestHarness : MonoBehaviour
     IEnumerator SimulateModule(Component component, Transform moduleTransform, MethodInfo method, string command)
     {
         // Simple Command
-        if (method.ReturnType == typeof(KMSelectable[]))
+        if (typeof(IEnumerable<KMSelectable>).IsAssignableFrom(method.ReturnType))
         {
-            KMSelectable[] selectableSequence = null;
+            IEnumerable<KMSelectable> selectableSequence = null;
             try
             {
-                selectableSequence = (KMSelectable[]) method.Invoke(component, new object[] { command });
+                selectableSequence = (IEnumerable<KMSelectable>) method.Invoke(component, new object[] { command });
                 if (selectableSequence == null)
                 {
+                    Debug.LogFormat("Twitch Plays handler reports invalid command (by returning null).", method.DeclaringType.FullName, method.Name);
                     yield break;
                 }
             }
@@ -709,7 +913,10 @@ public class TestHarness : MonoBehaviour
             }
 
             if (responseCoroutine == null)
+            {
+                Debug.LogFormat("Twitch Plays handler reports invalid command (by returning null).", method.DeclaringType.FullName, method.Name);
                 yield break;
+            }
 
             if (!ComponentHelds.ContainsKey(component))
                 ComponentHelds[component] = new HashSet<KMSelectable>();
@@ -717,6 +924,20 @@ public class TestHarness : MonoBehaviour
 
             int initialStrikes = fakeInfo.strikes;
             int initialSolved = fakeInfo.GetSolvedModuleNames().Count;
+
+            if (!responseCoroutine.MoveNext())
+            {
+                Debug.LogFormat("Twitch Plays handler reports invalid command (by returning empty sequence).", method.DeclaringType.FullName, method.Name);
+                yield break;
+            }
+
+            if (responseCoroutine.Current is string)
+            {
+                var str = (string) responseCoroutine.Current;
+                if (str.StartsWith("sendtochat"))
+                    Debug.Log("Twitch handler sent: " + str);
+                yield break;
+            }
 
             while (responseCoroutine.MoveNext())
             {
@@ -737,15 +958,37 @@ public class TestHarness : MonoBehaviour
                         heldSelectables.Add(selectable);
                     }
                 }
+                else if (currentObject is IEnumerable<KMSelectable>)
+                {
+                    foreach (var selectable in (IEnumerable<KMSelectable>) currentObject)
+                    {
+                        DoInteractionStart(selectable);
+                        yield return new WaitForSeconds(.1f);
+                        DoInteractionEnd(selectable);
+                    }
+                }
                 else if (currentObject is string)
                 {
+                    string currentString = (string) currentObject;
+                    float waitTime;
+                    Match match = Regex.Match(currentString, "^trywaitcancel ([0-9]+(?:\\.[0-9])?)((?: (?:.|\\n)+)?)$", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+                    if (match.Success && float.TryParse(match.Groups[1].Value, out waitTime))
+                    {
+                        yield return new WaitForSeconds(waitTime);
+                    }
+
                     Debug.Log("Twitch handler sent: " + currentObject);
+                    yield return currentObject;
                 }
                 else if (currentObject is Quaternion)
                 {
                     moduleTransform.localRotation = (Quaternion) currentObject;
                 }
-                yield return currentObject;
+                else
+                    yield return currentObject;
+
+                if (fakeInfo.strikes != initialStrikes || fakeInfo.GetSolvedModuleNames().Count != initialSolved)
+                    yield break;
             }
         }
     }
@@ -805,32 +1048,44 @@ public class TestHarness : MonoBehaviour
                     MethodInfo method = type.GetMethod("ProcessTwitchCommand", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
 
                     if (method != null)
-                    {
                         StartCoroutine(SimulateModule(component, module.transform, method, command));
-                    }
                 }
             }
             command = "";
         }
     }
 
+    private Light testLight;
+
+    public void PrepareLights()
+    {
+        foreach (Light l in FindObjectsOfType<Light>())
+        {
+            if (l.transform.parent == null) Destroy(l.gameObject);
+        }
+
+        GameObject o = new GameObject("Light");
+        o.transform.localPosition = new Vector3(0, 3, 0);
+        o.transform.localRotation = Quaternion.Euler(new Vector3(130, -30, 0));
+        testLight = o.AddComponent<Light>();
+        testLight.type = LightType.Directional;
+    }
+
     public void TurnLightsOn()
     {
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
         RenderSettings.ambientIntensity = 1f;
         DynamicGI.UpdateEnvironment();
 
-        foreach (Light l in FindObjectsOfType<Light>())
-            if (l.transform.parent == null)
-                l.enabled = true;
+        testLight.enabled = true;
     }
 
     public void TurnLightsOff()
     {
-        RenderSettings.ambientIntensity = 0.2f;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Skybox;
+        RenderSettings.ambientIntensity = 0.1f;
         DynamicGI.UpdateEnvironment();
 
-        foreach (Light l in FindObjectsOfType<Light>())
-            if (l.transform.parent == null)
-                l.enabled = false;
+        testLight.enabled = false;
     }
 }
