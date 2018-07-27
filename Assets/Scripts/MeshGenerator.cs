@@ -48,7 +48,7 @@ namespace FollowTheLeader
 
         public static Mesh GenerateWire(System.Random rnd, int lengthIndex, int color, WirePiece piece, bool highlight)
         {
-            var length = getWireLength(lengthIndex);
+            var length = GetWireLength(lengthIndex);
             var thickness = highlight ? _wireRadiusHighlight : _wireRadius;
             var firstControlHeight = highlight ? _firstControlHeightHighlight : _firstControlHeight;
             var interpolateHeight = highlight ? _interpolateHeightHighlight : _interpolateHeight;
@@ -177,7 +177,7 @@ namespace FollowTheLeader
                     .ToArray();
         }
 
-        private static double getWireLength(int index)
+        public static double GetWireLength(int index)
         {
             var outer = pt(_outerHexFrame.BoxCenterRadius, _outerHexFrame.Depth, 0);
             var inner = pt(_innerHexFrame.BoxCenterRadius, _innerHexFrame.Depth, 0).RotateY(30);

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FollowTheLeader;
+using Newtonsoft.Json;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 
@@ -16,12 +17,14 @@ public class FollowTheLeaderModule : MonoBehaviour
     public KMBombModule Module;
     public KMSelectable Selectable;
     public KMAudio Audio;
+    public KMModSettings ModSettings;
 
     public Material[] ColorMaterials;
     public Material CopperMaterial;
     public Mesh[] WireColliderMeshes;
+    public TextMesh TextTemplObj;
 
-    enum Color { Red, Green, White, Yellow, Blue, Black }
+    enum WireColor { Red, Green, White, Yellow, Blue, Black }
 
     private static int _moduleIdCounter = 1;
     private int _moduleId;
@@ -33,13 +36,23 @@ public class FollowTheLeaderModule : MonoBehaviour
         public int ConnectedTo;
         public bool DoesSkip { get { return ConnectedTo != (ConnectedFrom + 1) % 12; } }
 
-        public Color Color;
+        public WireColor Color;
         public bool MustCut;
         public bool IsCut;
         public string Justification;
         public KMSelectable Selectable;
 
-        public void Activate(Transform transform, FollowTheLeaderModule module)
+        private static readonly Dictionary<WireColor, Color> _colorDic = new Dictionary<WireColor, Color>
+        {
+            { WireColor.Black, new Color(0x29 / 512f, 0x29 / 512f, 0x29 / 512f) },
+            { WireColor.Blue, new Color(0x17 / 512f, 0x78 / 512f, 0xFF / 512f) },
+            { WireColor.Green, new Color(0x00 / 512f, 0xAE / 512f, 0x00 / 512f) },
+            { WireColor.Red, new Color(0xEA / 512f, 0x00 / 512f, 0x00 / 512f) },
+            { WireColor.White, new Color(0xE8 / 255f, 0xE8 / 255f, 0xE8 / 255f) },
+            { WireColor.Yellow, new Color(0xFF / 255f, 0xFF / 255f, 0x15 / 255f) }
+        };
+
+        public void Activate(Transform transform, FollowTheLeaderModule module, TextMesh colorBlindTextTemplObj)
         {
             Selectable = transform.GetComponent<KMSelectable>();
 
@@ -110,6 +123,18 @@ public class FollowTheLeaderModule : MonoBehaviour
                 return false;
             };
             transform.gameObject.SetActive(true);
+
+            if (colorBlindTextTemplObj != null)
+            {
+                var obj = Instantiate(colorBlindTextTemplObj);
+                obj.transform.parent = transform;
+                obj.transform.localPosition = new Vector3((float) (MeshGenerator.GetWireLength(lengthIndex) / 2), -.001f, .0222f);
+                obj.transform.localRotation = Quaternion.Euler(0, 0, 0);
+                obj.transform.localScale = new Vector3(.001f, -.001f, .001f);
+                obj.text = Color.ToString().ToUpperInvariant();
+                obj.color = _colorDic[Color];
+                obj.gameObject.SetActive(true);
+            }
         }
 
         public override string ToString()
@@ -150,7 +175,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             {
                 ConnectedFrom = currentPeg,
                 ConnectedTo = nextPeg,
-                Color = (Color) Rnd.Range(0, 6)
+                Color = (WireColor) Rnd.Range(0, 6)
             });
             currentPeg = nextPeg;
         }
@@ -165,48 +190,14 @@ public class FollowTheLeaderModule : MonoBehaviour
             _wireInfos[i].ConnectedTo = (_wireInfos[i].ConnectedTo + rotation) % 12;
         }
 
-        /* — CODE TO GENERATE ALL WIRE OBJECTS
-        for (int from = 0; from < 12; from++)
+        var colorBlindMode = false;
+        try
         {
-            foreach (var skip in new[] { false, true })
-            {
-                var to = (from + (skip ? 2 : 1)) % 12;
-                var mesh = WireColliderMeshes[skip ? from % 2 : 2];
-
-                // The irony of using one RNG to seed another RNG isn’t lost on me
-                var seed = Rnd.Range(0, int.MaxValue);
-                var rnd = new System.Random(seed);
-
-                var wire = new GameObject();
-                var meshFilter = wire.AddComponent<MeshFilter>();
-                meshFilter.mesh = mesh;
-                var meshRenderer = wire.AddComponent<MeshRenderer>();
-                meshRenderer.material = ColorMaterials[0];
-                var selectable = wire.AddComponent<KMSelectable>();
-                selectable.Parent = Selectable;
-
-                rnd = new System.Random(seed);
-                var wireHighlight = new GameObject();
-                wireHighlight.transform.parent = wire.transform;
-                meshFilter = wireHighlight.AddComponent<MeshFilter>();
-                meshFilter.mesh = mesh;
-                var highlightable = wireHighlight.AddComponent<KMHighlightable>();
-                highlightable.HighlightScale = new Vector3(1, 1, 1);
-                selectable.Highlight = highlightable;
-
-                wire.name = string.Format("Wire {0}-to-{1}", from + 1, to + 1);
-                wireHighlight.name = string.Format("Wire {0}-to-{1} highlight", from + 1, to + 1);
-
-                double x, z;
-                var angle = MeshGenerator.GetWirePosAndAngle(from, to, out x, out z);
-
-                wire.transform.parent = Module.transform;
-                wire.transform.Translate(new Vector3((float) x, 0.023f, (float) z));
-                wire.transform.Rotate(new Vector3(0, (float) (-angle), 0));
-                wire.transform.Rotate(new Vector3(-90, 0, 0));
-            }
+            var settings = JsonConvert.DeserializeObject<Dictionary<string, object>>(ModSettings.Settings);
+            if (settings != null)
+                colorBlindMode = (bool) settings["ColorBlindMode"];
         }
-        /**/
+        catch { }
 
         // Disable all the wires (we will later re-enable the ones we need)
         for (int from = 0; from < 12; from++)
@@ -214,7 +205,7 @@ public class FollowTheLeaderModule : MonoBehaviour
                 Module.transform.Find(string.Format("Wire {0}-to-{1}", from + 1, (from + (skip ? 2 : 1)) % 12 + 1)).gameObject.SetActive(false);
 
         for (int i = 0; i < _wireInfos.Count; i++)
-            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this);
+            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this, colorBlindMode ? TextTemplObj : null);
 
         Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
         Selectable.ChildRowLength = Selectable.Children.Length;
@@ -228,13 +219,13 @@ public class FollowTheLeaderModule : MonoBehaviour
         public Func<WireInfo, WireInfo, WireInfo, WireInfo, bool> Function;
     }
 
-    static Color[] _whiteBlack = new[] { Color.White, Color.Black };
+    static WireColor[] _whiteBlack = new[] { WireColor.White, WireColor.Black };
     static RuleInfo[] rules = Ex.NewArray(
         new RuleInfo
         {
             Name = "A or N",
             Formulation = "the previous wire is not yellow or blue or green",
-            Function = (p3, p2, p1, p0) => !new[] { Color.Yellow, Color.Blue, Color.Green }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => !new[] { WireColor.Yellow, WireColor.Blue, WireColor.Green }.Contains(p1.Color)
         },
         new RuleInfo
         {
@@ -252,7 +243,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         {
             Name = "D or Q",
             Formulation = "the previous wire is red or blue or black",
-            Function = (p3, p2, p1, p0) => new[] { Color.Red, Color.Blue, Color.Black }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => new[] { WireColor.Red, WireColor.Blue, WireColor.Black }.Contains(p1.Color)
         },
         new RuleInfo
         {
@@ -270,7 +261,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         {
             Name = "G or T",
             Formulation = "the previous wire is yellow or white or green",
-            Function = (p3, p2, p1, p0) => new[] { Color.Yellow, Color.White, Color.Green }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => new[] { WireColor.Yellow, WireColor.White, WireColor.Green }.Contains(p1.Color)
         },
         new RuleInfo
         {
@@ -288,7 +279,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         {
             Name = "J or W",
             Formulation = "the previous wire is not white or black or red",
-            Function = (p3, p2, p1, p0) => !new[] { Color.White, Color.Black, Color.Red }.Contains(p1.Color)
+            Function = (p3, p2, p1, p0) => !new[] { WireColor.White, WireColor.Black, WireColor.Red }.Contains(p1.Color)
         },
         new RuleInfo
         {
@@ -366,7 +357,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         // The starting step corresponds to the first letter in the serial number.
         var curStep = _serial.Where(ch => ch >= 'A' && ch <= 'Z').Select(ch => ch - 'A').FirstOrDefault() % rules.Length;
         // If the wire at the starting plug is red, green, or white, progress through the steps in reverse alphabetical order instead.
-        var reverse = new[] { Color.Red, Color.Green, Color.White }.Contains(_wireInfos[curIndex].Color);
+        var reverse = new[] { WireColor.Red, WireColor.Green, WireColor.White }.Contains(_wireInfos[curIndex].Color);
 
         _expectedCuts.Clear();
 
