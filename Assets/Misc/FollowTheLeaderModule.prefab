@@ -254,7 +254,7 @@ GameObject:
   - component: {fileID: 11489324}
   - component: {fileID: 11496072}
   - component: {fileID: 11485374}
-  - component: {fileID: 114163861983938332}
+  - component: {fileID: 114664887436767598}
   m_Layer: 0
   m_Name: FollowTheLeaderModule
   m_TagString: Untagged
@@ -3845,7 +3845,6 @@ MonoBehaviour:
   Module: {fileID: 11429752}
   Selectable: {fileID: 11420650}
   Audio: {fileID: 11496072}
-  ModSettings: {fileID: 114163861983938332}
   ColorMaterials:
   - {fileID: 2100000, guid: 0ab6607a79d6a064bb2830088e16477f, type: 2}
   - {fileID: 2100000, guid: 34160cf1adef0e04d9353eecf18a0f01, type: 2}
@@ -4109,7 +4108,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010056034260
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4135,7 +4134,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010383110660
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4148,7 +4147,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010673135518
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4161,7 +4160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010713821640
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4174,7 +4173,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010770909052
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4187,7 +4186,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000010845055514
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4200,7 +4199,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011408942872
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4213,7 +4212,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Decal
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011527621950
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4226,7 +4225,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011600587712
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4239,7 +4238,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011602438898
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4252,7 +4251,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011636581330
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4278,7 +4277,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Decal
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011719912418
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4291,7 +4290,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000011824826280
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4304,7 +4303,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012018518278
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4317,7 +4316,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012366062278
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4342,7 +4341,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012613516360
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4355,7 +4354,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012771170154
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4368,7 +4367,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012853176286
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4381,7 +4380,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000012871283308
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4394,7 +4393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000013306127620
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4407,7 +4406,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000013463238960
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4420,7 +4419,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000013711101538
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4433,7 +4432,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000013760760494
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4446,7 +4445,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000014130469974
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4459,7 +4458,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
+  - KT/Mobile/DiffuseTint
 --- !u!114 &114000014293672466
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -4472,8 +4471,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShaderNames:
-  - Legacy Shaders/Diffuse
---- !u!114 &114163861983938332
+  - KT/Mobile/DiffuseTint
+--- !u!114 &114664887436767598
 MonoBehaviour:
   m_ObjectHideFlags: 1
   m_PrefabParentObject: {fileID: 0}
@@ -4481,8 +4480,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 127088}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: -289456416, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
+  m_Script: {fileID: 11500000, guid: add50d8882b57914790c847b05a67433, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Settings: '{"ColorBlindMode":false}'
-  SettingsPath: FollowTheLeader-settings.txt
+  _colorblindMode: 0
