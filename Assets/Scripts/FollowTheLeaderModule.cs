@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FollowTheLeader;
-using Newtonsoft.Json;
+using KModkit;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
 
@@ -312,7 +312,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         else
         {
             _numBatteries = Bomb.GetBatteryCount();
-            _hasRJ = Bomb.GetPortCount(KMBombInfoExtensions.KnownPortType.RJ45) > 0;
+            _hasRJ = Bomb.GetPortCount(Port.RJ45) > 0;
             _hasLitCLR = Bomb.GetOnIndicators().Contains("CLR");
         }
 
