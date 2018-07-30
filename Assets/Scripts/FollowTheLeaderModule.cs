@@ -40,6 +40,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         public bool IsCut;
         public string Justification;
         public KMSelectable Selectable;
+        private TextMesh _colorBlindIndicator;
 
         private static Color Lightness(Color col, float lgh)
         {
@@ -57,7 +58,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             { WireColor.Yellow, Lightness(new Color(0xFF / 255f, 0xFF / 255f, 0x15 / 255f),.8f) }
         };
 
-        public void Activate(Transform transform, FollowTheLeaderModule module, TextMesh colorBlindTextTemplObj)
+        public void Activate(Transform transform, FollowTheLeaderModule module, TextMesh colorBlindTextTemplObj, bool colorBlindMode)
         {
             Selectable = transform.GetComponent<KMSelectable>();
 
@@ -129,17 +130,19 @@ public class FollowTheLeaderModule : MonoBehaviour
             };
             transform.gameObject.SetActive(true);
 
-            if (colorBlindTextTemplObj != null)
-            {
-                var obj = Instantiate(colorBlindTextTemplObj);
-                obj.transform.parent = transform;
-                obj.transform.localPosition = new Vector3((float) (MeshGenerator.GetWireLength(lengthIndex) / 2), -.002f, .0125f);
-                obj.transform.localRotation = Quaternion.Euler(0, 0, 0);
-                obj.transform.localScale = new Vector3(.001f, -.001f, .001f);
-                obj.text = WireColor.ToString().ToUpperInvariant();
-                obj.color = _colorDic[WireColor];
-                obj.gameObject.SetActive(true);
-            }
+            _colorBlindIndicator = Instantiate(colorBlindTextTemplObj);
+            _colorBlindIndicator.transform.parent = transform;
+            _colorBlindIndicator.transform.localPosition = new Vector3((float) (MeshGenerator.GetWireLength(lengthIndex) / 2), -.002f, .0125f);
+            _colorBlindIndicator.transform.localRotation = Quaternion.Euler(0, 0, 0);
+            _colorBlindIndicator.transform.localScale = new Vector3(.001f, -.001f, .001f);
+            _colorBlindIndicator.text = WireColor.ToString().ToUpperInvariant();
+            _colorBlindIndicator.color = _colorDic[WireColor];
+            _colorBlindIndicator.gameObject.SetActive(colorBlindMode);
+        }
+
+        public void EnableColorBlindMode()
+        {
+            _colorBlindIndicator.gameObject.SetActive(true);
         }
 
         public override string ToString()
@@ -202,7 +205,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
         var colorblindMode = GetComponent<KMColorblindMode>().ColorblindModeActive;
         for (int i = 0; i < _wireInfos.Count; i++)
-            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this, colorblindMode ? TextTemplObj : null);
+            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this, TextTemplObj, colorblindMode);
 
         Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
         Selectable.ChildRowLength = Selectable.Children.Length;
@@ -391,11 +394,17 @@ public class FollowTheLeaderModule : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private string TwitchHelpMessage = @"Cut the wires in a specific order with “!{0} cut 4 6 9 10 1 2”.";
+    private readonly string TwitchHelpMessage = @"Cut the wires in a specific order with “!{0} cut 4 6 9 10 1 2”. Use “!{0} colorblind” to show the wire colors.";
 #pragma warning restore 414
 
     KMSelectable[] ProcessTwitchCommand(string command)
     {
+        if (command == "colorblind")
+        {
+            for (int i = 0; i < _wireInfos.Count; i++)
+                _wireInfos[i].EnableColorBlindMode();
+            return new KMSelectable[0];
+        }
         if (!command.StartsWith("cut ", StringComparison.OrdinalIgnoreCase))
             return null;
         command = command.Substring(4);
