@@ -17,6 +17,8 @@ public class FollowTheLeaderModule : MonoBehaviour
     public KMBombModule Module;
     public KMSelectable Selectable;
     public KMAudio Audio;
+    public KMRuleSeedable RuleSeedable;
+    public KMColorblindMode ColorblindMode;
 
     public Material[] ColorMaterials;
     public Material CopperMaterial;
@@ -30,10 +32,10 @@ public class FollowTheLeaderModule : MonoBehaviour
 
     class WireInfo
     {
-        // 0–11
+        // 1–12
         public int ConnectedFrom;
         public int ConnectedTo;
-        public bool DoesSkip { get { return ConnectedTo != (ConnectedFrom + 1) % 12; } }
+        public bool DoesSkip { get { return ConnectedTo != ConnectedFrom % 12 + 1; } }
 
         public WireColor WireColor;
         public bool MustCut;
@@ -50,12 +52,12 @@ public class FollowTheLeaderModule : MonoBehaviour
         }
         private static readonly Dictionary<WireColor, Color> _colorDic = new Dictionary<WireColor, Color>
         {
-            { WireColor.Black, Lightness( new Color(0x29 / 255f, 0x29 / 255f, 0x29 / 255f),.1f) },
-            { WireColor.Blue, Lightness(new Color(0x17 / 255f, 0x78 / 255f, 0xFF / 255f) ,.5f)},
-            { WireColor.Green, Lightness(new Color(0x00 / 255f, 0xAE / 255f, 0x00 / 255f),.8f) },
-            { WireColor.Red, Lightness(new Color(0xEA / 255f, 0x00 / 255f, 0x00 / 255f) ,1f)},
-            { WireColor.White, Lightness(new Color(0xE8 / 255f, 0xE8 / 255f, 0xE8 / 255f),.8f )},
-            { WireColor.Yellow, Lightness(new Color(0xFF / 255f, 0xFF / 255f, 0x15 / 255f),.8f) }
+            { WireColor.Black, Lightness(new Color(0x29 / 255f, 0x29 / 255f, 0x29 / 255f), .1f) },
+            { WireColor.Blue, Lightness(new Color(0x17 / 255f, 0x78 / 255f, 0xFF / 255f), .5f) },
+            { WireColor.Green, Lightness(new Color(0x00 / 255f, 0xAE / 255f, 0x00 / 255f), .8f) },
+            { WireColor.Red, Lightness(new Color(0xEA / 255f, 0x00 / 255f, 0x00 / 255f), 1f) },
+            { WireColor.White, Lightness(new Color(0xE8 / 255f, 0xE8 / 255f, 0xE8 / 255f), .8f) },
+            { WireColor.Yellow, Lightness(new Color(0xFF / 255f, 0xFF / 255f, 0x15 / 255f), .8f) }
         };
 
         public void Activate(Transform transform, FollowTheLeaderModule module, TextMesh colorBlindTextTemplObj, bool colorBlindMode)
@@ -65,13 +67,13 @@ public class FollowTheLeaderModule : MonoBehaviour
             // The irony of using one RNG to seed another RNG isn’t lost on me
             var seed = Rnd.Range(0, int.MaxValue);
             var rnd = new System.Random(seed);
-            var lengthIndex = DoesSkip ? ConnectedFrom % 2 : 2;
+            var lengthIndex = DoesSkip ? 1 - ConnectedFrom % 2 : 2;
 
             transform.GetComponent<MeshFilter>().mesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) WireColor, MeshGenerator.WirePiece.Uncut, false);
             transform.GetComponent<MeshRenderer>().material = module.ColorMaterials[(int) WireColor];
 
             rnd = new System.Random(seed);
-            var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom + 1, ConnectedTo + 1));
+            var wireHighlight = transform.Find(string.Format("Wire {0}-to-{1} highlight", ConnectedFrom, ConnectedTo));
             var highlightMesh = MeshGenerator.GenerateWire(rnd, lengthIndex, (int) WireColor, MeshGenerator.WirePiece.Uncut, true);
             wireHighlight.GetComponent<MeshFilter>().mesh = highlightMesh;
 
@@ -90,10 +92,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             Selectable.OnInteract += delegate
             {
                 if (IsCut)
-                {
-                    Debug.LogFormat("[FollowTheLeader #{1}] You tried to cut a wire that is already cut ({0}).", this, module._moduleId);
                     return false;
-                }
 
                 Selectable.AddInteractionPunch();
                 module.Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.WireSnip, transform);
@@ -115,16 +114,20 @@ public class FollowTheLeaderModule : MonoBehaviour
 
                 if (module._expectedCuts.Count == 0 || module._expectedCuts[0] != this)
                 {
-                    Debug.LogFormat("[FollowTheLeader #{2}] Strike because you cut {0} but I expected {1}.", this, module._expectedCuts.Count == 0 ? "no more wires to be cut" : module._expectedCuts[0].ToString(), module._moduleId);
+                    Debug.LogFormat("[Follow the Leader #{2}] Strike because you cut {0} but I expected {1}.", this, module._expectedCuts.Count == 0 ? "no more wires to be cut" : module._expectedCuts[0].ToString(), module._moduleId);
                     module.Module.HandleStrike();
                 }
                 else
                 {
                     while (module._expectedCuts.Count > 0 && module._expectedCuts[0].IsCut)
                         module._expectedCuts.RemoveAt(0);
-                    Debug.LogFormat("[FollowTheLeader #{2}] Cutting {0} was correct. Expectation now is{1}", this, module._expectedCuts.Count == 0 ? " that you’re done." : ":\n" + string.Join("\n", module._expectedCuts.Select(wi => wi.ToString()).ToArray()), module._moduleId);
                     if (module._expectedCuts.Count == 0)
+                    {
+                        Debug.LogFormat("[Follow the Leader #{0}] Cutting {1} was correct. Module solved.", module._moduleId, this);
                         module.Module.HandlePass();
+                    }
+                    else
+                        Debug.LogFormat("[Follow the Leader #{0}] Cutting {1} was correct. Next expected wire: {2}", module._moduleId, this, module._expectedCuts[0]);
                 }
                 return false;
             };
@@ -147,7 +150,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
         public override string ToString()
         {
-            return string.Format("Wire {0}-to-{1} ({2})", ConnectedFrom + 1, ConnectedTo + 1, WireColor.ToString());
+            return string.Format("Wire {0}-to-{1} ({2})", ConnectedFrom, ConnectedTo, WireColor.ToString());
         }
 
         public string ToStringFull()
@@ -156,20 +159,87 @@ public class FollowTheLeaderModule : MonoBehaviour
         }
     }
 
-    int _numBatteries;
-    string _serial;
-    bool _hasRJ;
-    bool _hasLitCLR;
+    private List<WireInfo> _wireInfos;
+    private List<WireInfo> _expectedCuts;
 
-    List<WireInfo> _wireInfos;
-    List<WireInfo> _expectedCuts;
+    delegate bool EvaluateRule(Func<int, WireInfo> getWire, int wireIndex, int numWires, IEnumerable<WireInfo> wiresSinceStart);
+
+    delegate RuleInfo MakeSimpleRule(string name);
+    delegate RuleInfo MakeNumberRule6(string name, int number);
+    delegate RuleInfo MakeNumberRule12(string name, int number);
+    delegate RuleInfo MakeColorRule(string name, WireColor[] colors);
+
+    sealed class RuleInfo
+    {
+        public string Name;
+        public string Phrasing;
+        public EvaluateRule Evaluate;
+    }
+
+    private static int[] _primes = { 2, 3, 5, 7, 11 };
+    private static readonly Delegate[] _tableRules = Ex.NewArray<Delegate>(
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Cut this wire.", Evaluate = (w, ix, num, prev) => true }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Don’t cut this wire.", Evaluate = (w, ix, num, prev) => false }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire leads to an even numbered plug.", Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom % 2 == 0 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire leads to an odd numbered plug.", Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom % 2 != 0 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire leads to a prime numbered plug.", Evaluate = (w, ix, num, prev) => _primes.Contains(w(ix).ConnectedFrom) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire does not lead to a prime numbered plug.", Evaluate = (w, ix, num, prev) => !_primes.Contains(w(ix).ConnectedFrom) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire should be cut.", Evaluate = (w, ix, num, prev) => w(ix - 1).MustCut }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire should not be cut.", Evaluate = (w, ix, num, prev) => !w(ix - 1).MustCut }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous two wires are the same color.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor == w(ix - 1).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous two wires are different colors.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor != w(ix - 1).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Two of the previous three wires share a color.", Evaluate = (w, ix, num, prev) => Enumerable.Range(-3, 3).Select(off => w(ix + off)).Distinct().Count() < 3 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous three wires have different colors.", Evaluate = (w, ix, num, prev) => Enumerable.Range(-3, 3).Select(off => w(ix + off)).Distinct().Count() == 3 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous three wires are all the same color.", Evaluate = (w, ix, num, prev) => Enumerable.Range(-3, 3).Select(off => w(ix + off)).Distinct().Count() == 1 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire has the same color as this wire.", Evaluate = (w, ix, num, prev) => w(ix - 1).WireColor == w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire has a different color than this wire.", Evaluate = (w, ix, num, prev) => w(ix - 1).WireColor != w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Neither of the previous two wires is the same color as this wire.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor != w(ix).WireColor && w(ix - 1).WireColor != w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one of the previous two wires is the same color as this wire.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor == w(ix).WireColor ^ w(ix - 1).WireColor == w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Both of the previous two wires are the same color as this wire.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor == w(ix).WireColor && w(ix - 1).WireColor == w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one or neither of the previous two wires is the same color as this wire.", Evaluate = (w, ix, num, prev) => !(w(ix - 2).WireColor == w(ix).WireColor && w(ix - 1).WireColor == w(ix).WireColor) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one or both of the previous two wires are the same color as this wire.", Evaluate = (w, ix, num, prev) => w(ix - 2).WireColor == w(ix).WireColor || w(ix - 1).WireColor == w(ix).WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Neither or both of the previous two wires is the same color as this wire.", Evaluate = (w, ix, num, prev) => !(w(ix - 2).WireColor == w(ix).WireColor ^ w(ix - 1).WireColor == w(ix).WireColor) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire skips a plug.", Evaluate = (w, ix, num, prev) => w(ix - 1).DoesSkip }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire does not skip a plug.", Evaluate = (w, ix, num, prev) => !w(ix - 1).DoesSkip }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Neither of the previous two wires skips a plug.", Evaluate = (w, ix, num, prev) => !w(ix - 2).DoesSkip && !w(ix - 1).DoesSkip }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one of the previous two wires skips a plug.", Evaluate = (w, ix, num, prev) => w(ix - 2).DoesSkip ^ w(ix - 1).DoesSkip }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Both of the previous two wires skip a plug.", Evaluate = (w, ix, num, prev) => w(ix - 2).DoesSkip && w(ix - 1).DoesSkip }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one or neither of the previous two wires skips a plug.", Evaluate = (w, ix, num, prev) => !(w(ix - 2).DoesSkip && w(ix - 1).DoesSkip) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Exactly one or both of the previous two wires skip a plug.", Evaluate = (w, ix, num, prev) => w(ix - 2).DoesSkip || w(ix - 1).DoesSkip }),
+        new MakeNumberRule12((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire leads to a position labeled {0} or less.", n), Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom <= n }),
+        new MakeNumberRule12((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire does not lead to a position labeled {0} or less.", n), Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom > n }),
+        new MakeNumberRule12((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire leads to a position labeled {0} or more.", n), Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom >= n }),
+        new MakeNumberRule12((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire does not lead to a position labeled {0} or more.", n), Evaluate = (w, ix, num, prev) => w(ix).ConnectedFrom < n }),
+        new MakeNumberRule6((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("There are {0} or more wires on the module in total.", n), Evaluate = (w, ix, num, prev) => num >= n }),
+        new MakeNumberRule6((name, n) => new RuleInfo { Name = name, Phrasing = string.Format("There are {0} or fewer wires on the module in total.", n), Evaluate = (w, ix, num, prev) => num <= n }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire is {0} or {1} or {2}.", cs[0], cs[1], cs[2]), Evaluate = (w, ix, num, prev) => cs.Take(3).Contains(w(ix - 1).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("The previous wire is not {0} or {1} or {2}.", cs[0], cs[1], cs[2]), Evaluate = (w, ix, num, prev) => !cs.Take(3).Contains(w(ix - 1).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("The wire before the previous is {0} or {1} or {2}.", cs[0], cs[1], cs[2]), Evaluate = (w, ix, num, prev) => cs.Take(3).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("The wire before the previous is not {0} or {1} or {2}.", cs[0], cs[1], cs[2]), Evaluate = (w, ix, num, prev) => !cs.Take(3).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Neither of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => !cs.Take(2).Contains(w(ix - 1).WireColor) && !cs.Take(2).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Exactly one of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => cs.Take(2).Contains(w(ix - 1).WireColor) ^ cs.Take(2).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Both of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => cs.Take(2).Contains(w(ix - 1).WireColor) && cs.Take(2).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Exactly one or neither of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => !cs.Take(2).Contains(w(ix - 1).WireColor) || !cs.Take(2).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Exactly one or both of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => cs.Take(2).Contains(w(ix - 1).WireColor) || cs.Take(2).Contains(w(ix - 2).WireColor) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("Neither or both of the previous two wires are {0} or {1}.", cs[0], cs[1]), Evaluate = (w, ix, num, prev) => !(cs.Take(2).Contains(w(ix - 1).WireColor) ^ cs.Take(2).Contains(w(ix - 2).WireColor)) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("All previous {0} wires after the starting wire should be cut.", cs[0]), Evaluate = (_, ix, num, prev) => prev.Skip(1).All(w => w.MustCut || w.WireColor != cs[0]) }),
+        new MakeColorRule((name, cs) => new RuleInfo { Name = name, Phrasing = string.Format("All previous {0} wires after the starting wire should not be cut.", cs[0]), Evaluate = (_, ix, num, prev) => prev.Skip(1).All(w => !w.MustCut || w.WireColor != cs[0]) }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "More than half of the wires so far (including the starting wire) should be cut.", Evaluate = (_, ix, num, prev) => prev.Count(w => w.MustCut) > prev.Count() * .5 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Less than half of the wires so far (including the starting wire) should be cut.", Evaluate = (_, ix, num, prev) => prev.Count(w => w.MustCut) < prev.Count() * .5 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "More than half of the wires so far (not including the starting wire) should be cut.", Evaluate = (_, ix, num, prev) => prev.Skip(1).Count(w => w.MustCut) > (prev.Count() - 1) * .5 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "Less than half of the wires so far (not including the starting wire) should be cut.", Evaluate = (_, ix, num, prev) => prev.Skip(1).Count(w => w.MustCut) < (prev.Count() - 1) * .5 }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire has the same color as the starting wire.", Evaluate = (w, ix, num, prev) => w(ix - 1).WireColor == prev.First().WireColor }),
+        new MakeSimpleRule(name => new RuleInfo { Name = name, Phrasing = "The previous wire has a different color than the starting wire.", Evaluate = (w, ix, num, prev) => w(ix - 1).WireColor != prev.First().WireColor })
+    );
+
+    private static readonly string[] _rule4Indicators = "TRN,FRK,FRQ,BOB,IND,CAR,SIG,NSA,SND,CLR,MSA".Split(',');
 
     void Start()
     {
         _moduleId = _moduleIdCounter++;
-        Module.OnActivate += ActivateModule;
 
-        _expectedCuts = new List<WireInfo>();
+
+        // STEP 1: DECIDE WHICH WIRES SKIP WHICH PLUGS
         _wireInfos = new List<WireInfo>();
         var currentPeg = 0;
         do
@@ -181,8 +251,8 @@ public class FollowTheLeaderModule : MonoBehaviour
             var nextPeg = (currentPeg + (skip ? 2 : 1)) % 12;
             _wireInfos.Add(new WireInfo
             {
-                ConnectedFrom = currentPeg,
-                ConnectedTo = nextPeg,
+                ConnectedFrom = currentPeg + 1,
+                ConnectedTo = nextPeg + 1,
                 WireColor = (WireColor) Rnd.Range(0, 6)
             });
             currentPeg = nextPeg;
@@ -194,207 +264,195 @@ public class FollowTheLeaderModule : MonoBehaviour
         var rotation = Rnd.Range(0, 12);
         for (int i = 0; i < _wireInfos.Count; i++)
         {
-            _wireInfos[i].ConnectedFrom = (_wireInfos[i].ConnectedFrom + rotation) % 12;
-            _wireInfos[i].ConnectedTo = (_wireInfos[i].ConnectedTo + rotation) % 12;
+            _wireInfos[i].ConnectedFrom = (_wireInfos[i].ConnectedFrom + rotation - 1) % 12 + 1;
+            _wireInfos[i].ConnectedTo = (_wireInfos[i].ConnectedTo + rotation - 1) % 12 + 1;
         }
 
-        // Disable all the wires (we will later re-enable the ones we need)
-        for (int from = 0; from < 12; from++)
-            foreach (var skip in new[] { false, true })
+        // Disable all the wires
+        foreach (var skip in new[] { false, true })
+            for (int from = 0; from < 12; from++)
                 Module.transform.Find(string.Format("Wire {0}-to-{1}", from + 1, (from + (skip ? 2 : 1)) % 12 + 1)).gameObject.SetActive(false);
 
-        var colorblindMode = GetComponent<KMColorblindMode>().ColorblindModeActive;
+        // Re-enable the wires we need and set up their click handler and color-blind mode
+        var colorblindMode = ColorblindMode.ColorblindModeActive;
         for (int i = 0; i < _wireInfos.Count; i++)
-            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom + 1, _wireInfos[i].ConnectedTo + 1)), this, TextTemplObj, colorblindMode);
+            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom, _wireInfos[i].ConnectedTo)), this, TextTemplObj, colorblindMode);
 
         Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
         Selectable.ChildRowLength = Selectable.Children.Length;
         Selectable.UpdateChildren();
-    }
 
-    sealed class RuleInfo
-    {
-        public string Name;
-        public string Formulation;
-        public Func<WireInfo, WireInfo, WireInfo, WireInfo, bool> Function;
-    }
 
-    static WireColor[] _whiteBlack = new[] { WireColor.White, WireColor.Black };
-    static RuleInfo[] rules = Ex.NewArray(
-        new RuleInfo
-        {
-            Name = "A or N",
-            Formulation = "the previous wire is not yellow or blue or green",
-            Function = (p3, p2, p1, p0) => !new[] { WireColor.Yellow, WireColor.Blue, WireColor.Green }.Contains(p1.WireColor)
-        },
-        new RuleInfo
-        {
-            Name = "B or O",
-            Formulation = "the previous wire leads to an even numbered plug",
-            Function = (p3, p2, p1, p0) => p1.ConnectedTo % 2 == 1
-        },
-        new RuleInfo
-        {
-            Name = "C or P",
-            Formulation = "the previous wire should be cut",
-            Function = (p3, p2, p1, p0) => p1.MustCut
-        },
-        new RuleInfo
-        {
-            Name = "D or Q",
-            Formulation = "the previous wire is red or blue or black",
-            Function = (p3, p2, p1, p0) => new[] { WireColor.Red, WireColor.Blue, WireColor.Black }.Contains(p1.WireColor)
-        },
-        new RuleInfo
-        {
-            Name = "E or R",
-            Formulation = "two of the previous three wires shared a color",
-            Function = (p3, p2, p1, p0) => p1.WireColor == p2.WireColor || p1.WireColor == p3.WireColor || p2.WireColor == p3.WireColor,
-        },
-        new RuleInfo
-        {
-            Name = "F or S",
-            Formulation = "exactly one of the previous two wires were the same color as this wire",
-            Function = (p3, p2, p1, p0) => (p0.WireColor == p1.WireColor) ^ (p0.WireColor == p2.WireColor),
-        },
-        new RuleInfo
-        {
-            Name = "G or T",
-            Formulation = "the previous wire is yellow or white or green",
-            Function = (p3, p2, p1, p0) => new[] { WireColor.Yellow, WireColor.White, WireColor.Green }.Contains(p1.WireColor)
-        },
-        new RuleInfo
-        {
-            Name = "H or U",
-            Formulation = "the previous wire should not be cut",
-            Function = (p3, p2, p1, p0) => !p1.MustCut
-        },
-        new RuleInfo
-        {
-            Name = "I or V",
-            Formulation = "the previous wire skips a plug",
-            Function = (p3, p2, p1, p0) => p1.DoesSkip
-        },
-        new RuleInfo
-        {
-            Name = "J or W",
-            Formulation = "the previous wire is not white or black or red",
-            Function = (p3, p2, p1, p0) => !new[] { WireColor.White, WireColor.Black, WireColor.Red }.Contains(p1.WireColor)
-        },
-        new RuleInfo
-        {
-            Name = "K or X",
-            Formulation = "the previous two wires are different colors",
-            Function = (p3, p2, p1, p0) => p1.WireColor != p2.WireColor,
-        },
-        new RuleInfo
-        {
-            Name = "L or Y",
-            Formulation = "the previous wire does not lead to a position labeled 6 or less",
-            Function = (p3, p2, p1, p0) => p1.ConnectedTo > 5,
-        },
-        new RuleInfo
-        {
-            Name = "M or Z",
-            Formulation = "exactly one or neither of the previous two wires are white or black",
-            Function = (p3, p2, p1, p0) => !(_whiteBlack.Contains(p1.WireColor) && _whiteBlack.Contains(p2.WireColor))
-        }
-    );
+        // STEP 2: GENERATE THE RULES (KMRuleSeedable)
+        var rnd = RuleSeedable.GetRNG();
 
-    void ActivateModule()
-    {
-        _serial = Bomb.GetSerialNumber();
-        if (_serial == null)
+        var ports = new[] { Port.Parallel, Port.Serial, Port.RJ45, Port.PS2, Port.DVI, Port.StereoRCA };
+        var hasRule1Port = Bomb.IsPortPresent(ports[rnd.Next(0, ports.Length)]);
+
+        var snLetters = Bomb.GetSerialNumberLetters().ToArray();
+        var snDigits = Bomb.GetSerialNumberNumbers().ToArray();
+        var startingPlugConditions = Ex.NewArray(
+            Bomb.GetIndicators().Count(),
+            Bomb.GetOnIndicators().Count(),
+            Bomb.GetOffIndicators().Count(),
+            Bomb.GetBatteryCount(),
+            Bomb.GetBatteryHolderCount(),
+            Bomb.GetBatteryCount(Battery.AA) + Bomb.GetBatteryCount(Battery.AAx3) + Bomb.GetBatteryCount(Battery.AAx4),
+            Bomb.GetBatteryCount(Battery.D),
+            Bomb.GetPortCount(),
+            Bomb.GetPortPlateCount(),
+            Bomb.CountUniquePorts(),
+            Bomb.GetModuleNames().Count,
+            Bomb.GetSolvableModuleNames().Count,
+            snLetters[0] - 'A' + 1,
+            snLetters[1] - 'A' + 1,
+            snLetters[snLetters.Length - 1] - 'A' + 1,
+            snLetters[snLetters.Length - 2] - 'A' + 1,
+            snDigits[snDigits.Length - 1],
+            snDigits[snDigits.Length - 2],
+            snDigits[0]);
+
+        var rule2ConditionIx = rnd.Next(0, startingPlugConditions.Length);
+        var rule3ConditionIx = rnd.Next(0, startingPlugConditions.Length - 1);
+        if (rule3ConditionIx >= rule2ConditionIx)
+            rule3ConditionIx++;
+        var rule2Plug = startingPlugConditions[rule2ConditionIx];
+        var rule3Plug = startingPlugConditions[rule3ConditionIx];
+
+        var rule1StartPlug = rnd.Next(1, 13);
+        var rule4Indicator = _rule4Indicators[rnd.Next(0, _rule4Indicators.Length)];
+        var rule1EndPlug = (rnd.Next(rule1StartPlug + 1, rule1StartPlug + 3) - 1) % 12 + 1;
+        var hasRule4Indicator = rnd.Next(0, 2) != 0 ? Bomb.IsIndicatorOn(rule4Indicator) : Bomb.IsIndicatorOff(rule4Indicator);
+
+        var rule5StartAt = (rnd.Next(0, 12) + 5) % 12;  // Starting wire is at plug this +1, or +2 if the +1 doesn’t have a wire
+
+        var startingLetters = Ex.NewArray(
+            Bomb.GetIndicators().SelectMany(s => s).DefaultIfEmpty().Min(),
+            Bomb.GetIndicators().SelectMany(s => s).DefaultIfEmpty().Max(),
+            snLetters[1],
+            snLetters[snLetters.Length - 2],
+            snLetters[snLetters.Length - 1],
+            snLetters[0]);
+        var startingLetter = startingLetters[rnd.Next(0, startingLetters.Length)];
+        var fallbackLetter = (char) ('A' + (rnd.Next(0, 26) + 17) % 26);
+        if (startingLetter == '\0')
+            startingLetter = fallbackLetter;
+
+        var colors = new[] { WireColor.Red, WireColor.Green, WireColor.Blue, WireColor.White, WireColor.Black, WireColor.Yellow };
+        rnd.ShuffleFisherYates(colors);
+        var useReverseIf = colors.Take(3).ToArray();
+
+        var rules = new List<RuleInfo>();
+        if (rnd.Seed == 1)
         {
-            // Generate random values for testing in Unity
-            _serial = string.Join("", Enumerable.Range(0, 6).Select(i => Rnd.Range(0, 36)).Select(i => i < 10 ? ((char) ('0' + i)).ToString() : ((char) ('A' + i - 10)).ToString()).ToArray());
-            _hasRJ = Rnd.Range(0, 2) == 0;
-            _numBatteries = Rnd.Range(0, 7);
-            _hasLitCLR = Rnd.Range(0, 2) == 0;
+            rules.Add(((MakeColorRule) _tableRules[35])("A or N", new[] { WireColor.Yellow, WireColor.Blue, WireColor.Green }));
+            rules.Add(((MakeSimpleRule) _tableRules[2])("B or O"));
+            rules.Add(((MakeSimpleRule) _tableRules[6])("C or P"));
+            rules.Add(((MakeColorRule) _tableRules[34])("D or Q", new[] { WireColor.Red, WireColor.Blue, WireColor.Black }));
+            rules.Add(((MakeSimpleRule) _tableRules[10])("E or R"));
+            rules.Add(((MakeSimpleRule) _tableRules[16])("F or S"));
+            rules.Add(((MakeColorRule) _tableRules[34])("G or T", new[] { WireColor.Yellow, WireColor.White, WireColor.Green }));
+            rules.Add(((MakeSimpleRule) _tableRules[7])("H or U"));
+            rules.Add(((MakeSimpleRule) _tableRules[21])("I or V"));
+            rules.Add(((MakeColorRule) _tableRules[35])("J or W", new[] { WireColor.White, WireColor.Black, WireColor.Red }));
+            rules.Add(((MakeSimpleRule) _tableRules[9])("K or X"));
+            rules.Add(((MakeNumberRule12) _tableRules[29])("L or Y", 6));
+            rules.Add(((MakeColorRule) _tableRules[41])("M or Z", new[] { WireColor.White, WireColor.Black }));
         }
         else
         {
-            _numBatteries = Bomb.GetBatteryCount();
-            _hasRJ = Bomb.GetPortCount(Port.RJ45) > 0;
-            _hasLitCLR = Bomb.GetOnIndicators().Contains("CLR");
+            var tableRules = rnd.ShuffleFisherYates(_tableRules.ToArray());
+            for (var i = 0; i < 13; i++)
+            {
+                var name = string.Format("{0} or {1}", (char) ('A' + i), (char) ('N' + i));
+                if (tableRules[i] is MakeSimpleRule)
+                    rules.Add(((MakeSimpleRule) tableRules[i])(name));
+                else if (tableRules[i] is MakeNumberRule12)
+                    rules.Add(((MakeNumberRule12) tableRules[i])(name, rnd.Next(2, 12)));
+                else if (tableRules[i] is MakeNumberRule6)
+                    rules.Add(((MakeNumberRule6) tableRules[i])(name, rnd.Next(9, 12)));
+                else if (tableRules[i] is MakeColorRule)
+                {
+                    rnd.ShuffleFisherYates(colors);
+                    rules.Add(((MakeColorRule) tableRules[i])(name, colors.ToArray())); // important to take a copy of the array here so it doesn’t get re-shuffled
+                }
+            }
         }
+
+
+        // STEP 3: DETERMINE WHICH WIRES NEED TO BE CUT
 
         // Figure out the starting wire (as index into wireInfos, rather than peg number)
         int startIndex;
-        var serialFirstNumeral = _serial.Where(ch => ch >= '0' && ch <= '9').FirstOrNull();
-        if (_hasRJ && (startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 3 && wi.ConnectedTo == 4)) != -1)
+        if (hasRule1Port && (startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == rule1StartPlug && wi.ConnectedTo == rule1EndPlug)) != -1)
         {
-            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because RJ port.", _moduleId, _wireInfos[startIndex]);
+            Debug.LogFormat("[Follow the Leader #{0}] Starting at wire {1} because of rule 1.", _moduleId, _wireInfos[startIndex]);
         }
-        else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == _numBatteries)) != -1)
+        else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == rule2Plug)) != -1)
         {
-            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because number of batteries.", _moduleId, _wireInfos[startIndex]);
+            Debug.LogFormat("[Follow the Leader #{0}] Starting at wire {1} because of rule 2.", _moduleId, _wireInfos[startIndex]);
         }
-        else if (serialFirstNumeral != null && (startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom + 1 == serialFirstNumeral.Value - '0')) != -1)
+        else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == rule3Plug)) != -1)
         {
-            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because serial number’s first numeral.", _moduleId, _wireInfos[startIndex]);
+            Debug.LogFormat("[Follow the Leader #{0}] Starting at wire {1} because of rule 3.", _moduleId, _wireInfos[startIndex]);
         }
-        else if (_hasLitCLR)
+        else if (hasRule4Indicator)
         {
-            Debug.Log("[FollowTheLeader] Cut everything in reverse order because lit CLR.");
+            Debug.LogFormat("[Follow the Leader #{0}] Cut everything in reverse order because of rule 4.", _moduleId);
             foreach (var wi in _wireInfos)
-                wi.Justification = "CLR rule.";
-            _expectedCuts.Clear();
-            _expectedCuts.AddRange(_wireInfos.OrderByDescending(w => w.ConnectedFrom));
+                wi.Justification = "Rule 4.";
+            _expectedCuts = _wireInfos.OrderByDescending(w => w.ConnectedFrom).ToList();
             goto end;
         }
-        else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 0)) != -1)
+        else if ((startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == rule5StartAt + 1)) != -1)
         {
-            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because no other rule applies.", _moduleId, _wireInfos[startIndex]);
+            Debug.LogFormat("[Follow the Leader #{0}] Starting at wire {1} because of rule 5.", _moduleId, _wireInfos[startIndex]);
         }
         else
         {
-            startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == 1);
-            Debug.LogFormat("[FollowTheLeader #{0}] Starting at wire {1} because no other rule applies.", _moduleId, _wireInfos[startIndex]);
+            startIndex = _wireInfos.IndexOf(wi => wi.ConnectedFrom == (rule5StartAt + 1) % 12 + 1);
+            Debug.LogFormat("[Follow the Leader #{0}] Starting at wire {1} because of rule 5.", _moduleId, _wireInfos[startIndex]);
         }
 
-        var curIndex = startIndex;
-        // The starting step corresponds to the first letter in the serial number.
-        var curStep = _serial.Where(ch => ch >= 'A' && ch <= 'Z').Select(ch => ch - 'A').FirstOrDefault() % rules.Length;
-        // If the wire at the starting plug is red, green, or white, progress through the steps in reverse alphabetical order instead.
-        var reverse = new[] { WireColor.Red, WireColor.Green, WireColor.White }.Contains(_wireInfos[curIndex].WireColor);
+        var curStep = (startingLetter - 'A') % rules.Count;
+        var reverse = useReverseIf.Contains(_wireInfos[startIndex].WireColor);
 
-        _expectedCuts.Clear();
+        Debug.LogFormat("[Follow the Leader #{0}] Start at rule {1} and go {2}.", _moduleId, startingLetter, reverse ? "backwards" : "forwards");
+
+        _expectedCuts = new List<WireInfo>();
+        var wiresSinceStart = new List<WireInfo> { _wireInfos[startIndex] };
 
         // Finally, determine which wires need cutting
         for (int i = 0; i < _wireInfos.Count; i++)
         {
+            var curIndex = (i + startIndex) % _wireInfos.Count;
+            var wire = _wireInfos[curIndex];
             if (i == 0)
             {
                 // Always cut the first one.
-                _wireInfos[curIndex].MustCut = true;
-                _wireInfos[curIndex].Justification = "Cut because this is the starting wire.";
+                wire.MustCut = true;
+                wire.Justification = "Cut because this is the starting wire.";
             }
             else
             {
-                _wireInfos[curIndex].MustCut = rules[curStep].Function(
-                    _wireInfos[(curIndex + _wireInfos.Count - 3) % _wireInfos.Count],
-                    _wireInfos[(curIndex + _wireInfos.Count - 2) % _wireInfos.Count],
-                    _wireInfos[(curIndex + _wireInfos.Count - 1) % _wireInfos.Count],
-                    _wireInfos[curIndex]
-                );
-                _wireInfos[curIndex].Justification = string.Format("Rule {0}: cut if {1} ⇒ {2}", rules[curStep].Name, rules[curStep].Formulation, _wireInfos[curIndex].MustCut ? "CUT" : "DON’T CUT");
-                curStep = (curStep + rules.Length + (reverse ? -1 : 1)) % rules.Length;
+                wire.MustCut = rules[curStep].Evaluate(getWire, curIndex, _wireInfos.Count, wiresSinceStart);
+                wire.Justification = string.Format("Rule {0}: {1} ⇒ {2}", rules[curStep].Name, rules[curStep].Phrasing, wire.MustCut ? "CUT" : "DON’T CUT");
+                curStep = (curStep + (reverse ? -1 : 1) + rules.Count) % rules.Count;
             }
-
-            if (_wireInfos[curIndex].MustCut)
-                _expectedCuts.Add(_wireInfos[curIndex]);
-
-            curIndex = (curIndex + 1) % _wireInfos.Count;
+            wiresSinceStart.Add(wire);
+            if (wire.MustCut)
+                _expectedCuts.Add(wire);
         }
 
-        Debug.LogFormat("[FollowTheLeader #{0}] Wire state:\n{1}", _moduleId, string.Join("\n", Enumerable.Range(0, _wireInfos.Count).Select(i => _wireInfos[(i + startIndex) % _wireInfos.Count].ToStringFull()).ToArray()));
+        Debug.LogFormat("[Follow the Leader #{0}] Wire state:\n{1}", _moduleId, string.Join("\n", Enumerable.Range(0, _wireInfos.Count).Select(i => _wireInfos[(i + startIndex) % _wireInfos.Count].ToStringFull()).ToArray()));
         end:
-        Debug.LogFormat("[FollowTheLeader #{0}] Expectation:\n{1}", _moduleId, string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
+        Debug.LogFormat("[Follow the Leader #{0}] Expectation:\n{1}", _moduleId, string.Join("\n", _expectedCuts.Select(wi => wi.ToString()).ToArray()));
     }
 
+    private WireInfo getWire(int i) { return _wireInfos[(i % _wireInfos.Count + _wireInfos.Count) % _wireInfos.Count]; }
+
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = @"Cut the wires in a specific order with “!{0} cut 4 6 9 10 1 2”. Use “!{0} colorblind” to show the wire colors.";
+    private readonly string TwitchHelpMessage = @"!{0} cut 4 6 9 10 1 2 [cut wires starting at these plugs] | !{0} colorblind";
 #pragma warning restore 414
 
     KMSelectable[] ProcessTwitchCommand(string command)
@@ -414,7 +472,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             int number;
             if (!int.TryParse(cmd, out number))
                 return null;
-            var wireInfo = _wireInfos.FirstOrDefault(wi => wi.ConnectedFrom + 1 == number);
+            var wireInfo = _wireInfos.FirstOrDefault(wi => wi.ConnectedFrom == number);
             if (wireInfo == null)
                 return null;
             wires.Add(wireInfo.Selectable);

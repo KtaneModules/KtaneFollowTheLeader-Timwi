@@ -255,6 +255,7 @@ GameObject:
   - component: {fileID: 11496072}
   - component: {fileID: 11485374}
   - component: {fileID: 114664887436767598}
+  - component: {fileID: 114164146366683470}
   m_Layer: 0
   m_Name: FollowTheLeaderModule
   m_TagString: Untagged
@@ -3845,6 +3846,8 @@ MonoBehaviour:
   Module: {fileID: 11429752}
   Selectable: {fileID: 11420650}
   Audio: {fileID: 11496072}
+  RuleSeedable: {fileID: 114164146366683470}
+  ColorblindMode: {fileID: 114664887436767598}
   ColorMaterials:
   - {fileID: 2100000, guid: 0ab6607a79d6a064bb2830088e16477f, type: 2}
   - {fileID: 2100000, guid: 34160cf1adef0e04d9353eecf18a0f01, type: 2}
@@ -4472,6 +4475,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShaderNames:
   - KT/Mobile/DiffuseTint
+--- !u!114 &114164146366683470
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 127088}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adf69c2de51bd3c43bbd9bc22578ee08, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _seed: 1
 --- !u!114 &114664887436767598
 MonoBehaviour:
   m_ObjectHideFlags: 1
