@@ -285,6 +285,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
         // STEP 2: GENERATE THE RULES (KMRuleSeedable)
         var rnd = RuleSeedable.GetRNG();
+        Debug.LogFormat(@"[Follow the Leader #{0}] Using rule seed: {1}", _moduleId, rnd.Seed);
 
         var ports = new[] { Port.Parallel, Port.Serial, Port.RJ45, Port.PS2, Port.DVI, Port.StereoRCA };
         var hasRule1Port = Bomb.IsPortPresent(ports[rnd.Next(0, ports.Length)]);
