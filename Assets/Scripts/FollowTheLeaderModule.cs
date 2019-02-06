@@ -421,7 +421,7 @@ public class FollowTheLeaderModule : MonoBehaviour
         Debug.LogFormat("[Follow the Leader #{0}] Start at rule {1} and go {2}.", _moduleId, startingLetter, reverse ? "backwards" : "forwards");
 
         _expectedCuts = new List<WireInfo>();
-        var wiresSinceStart = new List<WireInfo> { _wireInfos[startIndex] };
+        var wiresSinceStart = new List<WireInfo>();
 
         // Finally, determine which wires need cutting
         for (int i = 0; i < _wireInfos.Count; i++)
