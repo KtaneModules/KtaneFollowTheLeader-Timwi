@@ -310,7 +310,7 @@ public class FollowTheLeaderModule : MonoBehaviour
             snLetters[snLetters.Length - 1] - 'A' + 1,
             snLetters[snLetters.Length - 2] - 'A' + 1,
             snDigits[snDigits.Length - 1],
-            snDigits[snDigits.Length - 2],
+            snDigits[1],
             snDigits[0]);
 
         var rule2ConditionIx = rnd.Next(0, startingPlugConditions.Length);
