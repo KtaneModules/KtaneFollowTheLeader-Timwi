@@ -136,8 +136,8 @@ public class FollowTheLeaderModule : MonoBehaviour
             _colorBlindIndicator = Instantiate(colorBlindTextTemplObj);
             _colorBlindIndicator.transform.parent = transform;
             _colorBlindIndicator.transform.localPosition = new Vector3((float) (MeshGenerator.GetWireLength(lengthIndex) / 2), -.002f, .0125f);
-            _colorBlindIndicator.transform.localRotation = Quaternion.Euler(0, 0, 0);
-            _colorBlindIndicator.transform.localScale = new Vector3(.001f, -.001f, .001f);
+            _colorBlindIndicator.transform.localRotation = Quaternion.Euler(180, 0, 0);
+            _colorBlindIndicator.transform.localScale = new Vector3(.001f, .001f, .001f);
             _colorBlindIndicator.text = WireColor.ToString().ToUpperInvariant();
             _colorBlindIndicator.color = _colorDic[WireColor];
             _colorBlindIndicator.gameObject.SetActive(colorBlindMode);
