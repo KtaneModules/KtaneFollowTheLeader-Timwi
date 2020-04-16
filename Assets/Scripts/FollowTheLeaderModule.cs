@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using FollowTheLeader;
@@ -479,5 +480,14 @@ public class FollowTheLeaderModule : MonoBehaviour
             wires.Add(wireInfo.Selectable);
         }
         return wires.ToArray();
+    }
+
+    IEnumerator TwitchHandleForcedSolve()
+    {
+        while (_expectedCuts.Count > 0)
+        {
+            _expectedCuts[0].Selectable.OnInteract();
+            yield return new WaitForSeconds(.1f);
+        }
     }
 }
