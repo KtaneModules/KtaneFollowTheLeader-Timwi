@@ -30,6 +30,7 @@ public class FollowTheLeaderModule : MonoBehaviour
 
     private static int _moduleIdCounter = 1;
     private int _moduleId;
+    private bool _colorblind;
 
     class WireInfo
     {
@@ -144,9 +145,9 @@ public class FollowTheLeaderModule : MonoBehaviour
             _colorBlindIndicator.gameObject.SetActive(colorBlindMode);
         }
 
-        public void EnableColorBlindMode()
+        public void SetColorBlindMode(bool colorBlindMode)
         {
-            _colorBlindIndicator.gameObject.SetActive(true);
+            _colorBlindIndicator.gameObject.SetActive(colorBlindMode);
         }
 
         public override string ToString()
@@ -275,9 +276,9 @@ public class FollowTheLeaderModule : MonoBehaviour
                 Module.transform.Find(string.Format("Wire {0}-to-{1}", from + 1, (from + (skip ? 2 : 1)) % 12 + 1)).gameObject.SetActive(false);
 
         // Re-enable the wires we need and set up their click handler and color-blind mode
-        var colorblindMode = ColorblindMode.ColorblindModeActive;
+        _colorblind = ColorblindMode.ColorblindModeActive;
         for (int i = 0; i < _wireInfos.Count; i++)
-            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom, _wireInfos[i].ConnectedTo)), this, TextTemplObj, colorblindMode);
+            _wireInfos[i].Activate(Module.transform.Find(string.Format("Wire {0}-to-{1}", _wireInfos[i].ConnectedFrom, _wireInfos[i].ConnectedTo)), this, TextTemplObj, _colorblind);
 
         Selectable.Children = _wireInfos.OrderBy(wi => wi.ConnectedFrom).Select(wi => wi.Selectable).ToArray();
         Selectable.ChildRowLength = Selectable.Children.Length;
@@ -461,8 +462,9 @@ public class FollowTheLeaderModule : MonoBehaviour
     {
         if (command == "colorblind")
         {
+            _colorblind = !_colorblind;
             for (int i = 0; i < _wireInfos.Count; i++)
-                _wireInfos[i].EnableColorBlindMode();
+                _wireInfos[i].SetColorBlindMode(_colorblind);
             return new KMSelectable[0];
         }
         if (!command.StartsWith("cut ", StringComparison.OrdinalIgnoreCase))
